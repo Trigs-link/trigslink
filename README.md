@@ -195,8 +195,8 @@ We welcome contributions from the community. Please review our contribution guid
 
 ## 📬 Contact & Support
 
-- **Documentation:** [docs.trigslink.io](https://docs.trigslink.io)
-- **Discord:** [Join our community](https://discord.gg/trigslink)
+- **Documentation:** [trigs.link](https://trigs.link)
+- **Email** [Reach out to us](mailto:trigslink@gmail.com)
 - **Twitter:** [@Trigslink](https://twitter.com/Trigslink)
 
 ---
