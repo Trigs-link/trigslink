@@ -3,13 +3,12 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 describe("TrigslinkVault", function () {
-  // --- FIXTURE: Deploys the contract and creates a snapshot ---
+  // --- FIXTURE: Deploys the contract once and snapshots the state ---
   async function deployVaultFixture() {
-    // Get multiple signers to simulate different roles
     const [deployer, trigslinkManager, user1, user2] = await ethers.getSigners();
 
     const Vault = await ethers.getContractFactory("TrigslinkVault");
-    // Deploying with the Manager address as the constructor argument
+    // Pass the Manager address to the constructor
     const vault = await Vault.deploy(trigslinkManager.address);
 
     return { vault, deployer, trigslinkManager, user1, user2 };
@@ -23,65 +22,84 @@ describe("TrigslinkVault", function () {
   });
 
   describe("Placing Bets", function () {
-    it("Should update the total pool and emit a BetPlaced event", async function () {
+    it("Should allow a user to bet on YES (Outcome 1) and update pools", async function () {
       const { vault, user1 } = await loadFixture(deployVaultFixture);
-      const marketId = "BTC_100K_MAY";
-      const betAmount = ethers.parseEther("1.5");
+      const marketId = "ETH_ETF_APPROVAL";
+      const betAmount = ethers.parseEther("1.0");
 
-      // Place bet and check for the event emission
-      await expect(vault.connect(user1).placeBet(marketId, { value: betAmount }))
+      // Place bet on outcome 1
+      await expect(vault.connect(user1).placeBet(marketId, 1, { value: betAmount }))
         .to.emit(vault, "BetPlaced")
-        .withArgs(marketId, user1.address, betAmount);
+        .withArgs(marketId, user1.address, 1, betAmount);
 
-      // Verify the total pool was updated
       const market = await vault.markets(marketId);
       expect(market.totalPool).to.equal(betAmount);
+      expect(market.outcome1Pool).to.equal(betAmount);
+      expect(market.outcome2Pool).to.equal(0n);
     });
 
-    it("Should track individual user bets correctly", async function () {
-      const { vault, user1, user2 } = await loadFixture(deployVaultFixture);
-      const marketId = "ETH_10K_DEC";
-      const betAmount1 = ethers.parseEther("2.0");
-      const betAmount2 = ethers.parseEther("3.0");
+    it("Should reject bets with invalid outcomes", async function () {
+      const { vault, user1 } = await loadFixture(deployVaultFixture);
+      const marketId = "ETH_ETF_APPROVAL";
+      const betAmount = ethers.parseEther("1.0");
 
-      await vault.connect(user1).placeBet(marketId, { value: betAmount1 });
-      await vault.connect(user2).placeBet(marketId, { value: betAmount2 });
-
-      // Assuming your userBets mapping is structured as: mapping(string => mapping(address => uint256))
-      // Note: Nested mappings can't be fetched directly in one call via ethers without a getter function, 
-      // but the total pool should equal the sum.
-      const market = await vault.markets(marketId);
-      expect(market.totalPool).to.equal(betAmount1 + betAmount2);
+      // Attempting to bet on outcome '3' should fail
+      await expect(vault.connect(user1).placeBet(marketId, 3, { value: betAmount }))
+        .to.be.revertedWith("Invalid outcome. Use 1 or 2.");
     });
   });
 
-  describe("Autonomous Resolution", function () {
-    it("Should allow the TrigslinkManager to resolve the market", async function () {
-      const { vault, trigslinkManager } = await loadFixture(deployVaultFixture);
-      const marketId = "BTC_100K_MAY";
-      const OUTCOME_YES = 1;
+  describe("Autonomous Resolution & Payouts", function () {
+    it("Should allow ONLY the Manager to resolve the market", async function () {
+      const { vault, deployer, trigslinkManager } = await loadFixture(deployVaultFixture);
+      const marketId = "AI_BILL_PASS";
+      
+      // Original deployer (human) tries and fails
+      await expect(vault.connect(deployer).resolveMarket(marketId, 1))
+        .to.be.revertedWith("Only Trigslink Manager can resolve");
 
-      await expect(vault.connect(trigslinkManager).resolveMarket(marketId, OUTCOME_YES))
+      // The autonomous Manager succeeds
+      await expect(vault.connect(trigslinkManager).resolveMarket(marketId, 1))
         .to.emit(vault, "MarketResolved")
-        .withArgs(marketId, OUTCOME_YES);
-
-      const market = await vault.markets(marketId);
-      expect(market.resolved).to.be.true;
-      expect(market.finalOutcome).to.equal(OUTCOME_YES);
+        .withArgs(marketId, 1);
     });
 
-    it("Should REVERT if anyone other than the Manager tries to resolve", async function () {
-      const { vault, deployer, user1 } = await loadFixture(deployVaultFixture);
-      const marketId = "BTC_100K_MAY";
-      const OUTCOME_YES = 1;
+    it("Should calculate and distribute winnings proportionally", async function () {
+      const { vault, trigslinkManager, user1, user2 } = await loadFixture(deployVaultFixture);
+      const marketId = "SOL_BREAKS_300";
+      
+      // Setup the pool
+      // User 1 bets 1 ETH on YES (1)
+      await vault.connect(user1).placeBet(marketId, 1, { value: ethers.parseEther("1.0") });
+      // User 2 bets 3 ETH on NO (2)
+      await vault.connect(user2).placeBet(marketId, 2, { value: ethers.parseEther("3.0") });
 
-      // The original deployer should fail
-      await expect(vault.connect(deployer).resolveMarket(marketId, OUTCOME_YES))
-        .to.be.revertedWith("Only the Trigslink Manager can resolve");
+      // Total Pool is now 4 ETH. 
+      // Manager resolves the market as YES (1).
+      await vault.connect(trigslinkManager).resolveMarket(marketId, 1);
 
-      // A random user should fail
-      await expect(vault.connect(user1).resolveMarket(marketId, OUTCOME_YES))
-        .to.be.revertedWith("Only the Trigslink Manager can resolve");
+      // User 1 claims their winnings. Since they were the ONLY winner, 
+      // they should receive the entire 4 ETH pool.
+      await expect(vault.connect(user1).claimWinnings(marketId))
+        .to.changeEtherBalances(
+          [vault, user1],
+          [-ethers.parseEther("4.0"), ethers.parseEther("4.0")]
+        );
+    });
+
+    it("Should prevent losers from claiming payouts", async function () {
+      const { vault, trigslinkManager, user1, user2 } = await loadFixture(deployVaultFixture);
+      const marketId = "SOL_BREAKS_300";
+      
+      await vault.connect(user1).placeBet(marketId, 1, { value: ethers.parseEther("1.0") });
+      await vault.connect(user2).placeBet(marketId, 2, { value: ethers.parseEther("1.0") });
+
+      // Manager resolves as YES (1)
+      await vault.connect(trigslinkManager).resolveMarket(marketId, 1);
+
+      // User 2 (who bet NO) tries to claim and is rightfully rejected
+      await expect(vault.connect(user2).claimWinnings(marketId))
+        .to.be.revertedWith("No winning bets to claim");
     });
   });
 });
