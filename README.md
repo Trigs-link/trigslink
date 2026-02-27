@@ -1,204 +1,144 @@
-# TrigslinkVault
-### Autonomous Prediction Market Infrastructure
+# Trigslink Protocol: Autonomous Settlement & Universal Liquidity Rails
 
-TrigslinkVault serves as the core financial engine of the Trigslink Protocol—a deterministic, machine-verified settlement layer that revolutionizes how prediction markets operate. By eliminating the 24-48 hour "Zombie Period" inherent in legacy Optimistic Oracles, this vault achieves finality in approximately **15 seconds** through autonomous Chainlink Runtime Environment (CRE) integration.
+Trigslink is a decentralized infrastructure protocol designed to eliminate the "Zombie Period" of capital lockup in prediction markets. By replacing human-driven dispute windows with a machine-verified truth engine, Trigslink achieves ~15-second settlement finality.
 
----
-
-## 📋 Table of Contents
-- [The Problem We Solve](#-the-problem-we-solve)
-- [Core Architecture](#-core-architecture)
-- [Smart Contract Interface](#-smart-contract-interface)
-- [Getting Started](#-getting-started)
-- [Development](#-development)
-- [Roadmap](#-roadmap)
+Furthermore, the protocol utilizes **Universal Liquidity Rails (ULR)** via Chainlink CCIP to unify fragmented cross-chain capital into a single global truth pool.
 
 ---
 
-## ⚡ The Problem We Solve
+## System Architecture Overview
 
-Traditional prediction markets suffer from critical delays:
-- **24-48 hour waiting periods** for market resolution
-- **Human-dependent governance** prone to manipulation
-- **Capital inefficiency** from locked funds
+The Trigslink ecosystem is built on three core smart contract pillars:
 
-TrigslinkVault transforms this paradigm through automation and deterministic logic.
+1. **The Financial Engine (`TrigslinkVault.sol`)**: Holds the unified liquidity, tracks user positions, and calculates proportional payouts.
+2. **The Autonomous Brain (`TrigslinkManager.sol`)**: Utilizes Chainlink Functions to ping official news wires/APIs, verify off-chain truth, and trigger autonomous settlement.
+3. **The Universal Liquidity Bridge (`TrigslinkCrossChain.sol`)**: Utilizes Chainlink CCIP to capture bets from satellite chains (e.g., Base, Arbitrum) and route the capital to the main Vault.
 
----
+### High-Level Capital & Data Flow
 
-## 🏗️ Core Architecture
+```mermaid
+graph TD
+    subgraph Satellite Chains [Satellite Chains e.g., Base]
+        UserA[User A] -->|Places Bet + Funds| CC_Sender[TrigslinkCrossChain.sol]
+    end
 
-Unlike conventional markets that rely on subjective human debate, our infrastructure operates on three foundational principles:
+    subgraph The Universal Liquidity Rails
+        CC_Sender -->|Chainlink CCIP EVM2AnyMessage| Bridge((Cross-Chain Bridge))
+    end
 
-### 🤖 **No Human Owner**
-The contract is governed exclusively by the `trigslinkManager` address—a decentralized network of verification nodes. No single entity possesses control.
+    subgraph Main Hub [Main Settlement Chain e.g., Ethereum]
+        Bridge -->|Routes Capital & Data| Vault[TrigslinkVault.sol]
+        UserB[User B] -->|Direct Bet| Vault
+        
+        Manager[TrigslinkManager.sol] -->|Triggers resolution| Vault
+    end
 
-### 📊 **Proportional Payouts**
-Liquidity flows into unified event pools. When markets resolve, payouts distribute proportionally based on each user's share of the winning outcome pool.
+    subgraph Off-Chain Truth Engine
+        Manager <-->|Requests Truth| DON((Chainlink DON / Functions))
+        DON <-->|Scrapes APIs/News| APIs[Official News Wires]
+    end
 
-### ⚡ **Instant Claiming**
-The moment autonomous nodes reach consensus and trigger `resolveMarket`, users gain immediate access to claim their winnings—recycling capital at blockchain speed.
-
----
-
-## 📝 Smart Contract Interface
-
-### Constructor
-
-#### `constructor(address _manager)`
-Initializes the vault with permanent, immutable governance.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `_manager` | `address` | The autonomous manager contract address |
-
-**Security Note:** This setting is permanent—only the designated manager can resolve markets, making human manipulation mathematically and economically impossible.
-
----
-
-### Core Functions
-
-#### `placeBet(string memory _marketId, uint8 _outcome)`
-Allows users to deposit ETH and establish positions on market outcomes.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `_marketId` | `string` | Unique identifier for the target event |
-| `_outcome` | `uint8` | Position: `1` (YES) or `2` (NO) |
-
-**Requirements:**
-- Market must remain unsettled
-- Bet amount must exceed zero
-
----
-
-#### `resolveMarket(string memory _marketId, uint8 _outcome)`
-Locks the market and establishes the final winning outcome.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `_marketId` | `string` | Target market identifier |
-| `_outcome` | `uint8` | Winning outcome: `1` (YES) or `2` (NO) |
-
-**Access Control:** 🔒 `msg.sender == trigslinkManager` (strict enforcement)
-
----
-
-#### `claimWinnings(string memory _marketId)`
-Calculates and distributes rewards to users who predicted correctly.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `_marketId` | `string` | Market from which to claim |
-
-**Payout Formula:**
-```
-(User Bet ÷ Total Winning Pool) × Total Market Pool
+    classDef contract fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#fff;
+    classDef external fill:#0f766e,stroke:#14b8a6,stroke-width:2px,color:#fff;
+    
+    class Vault,Manager,CC_Sender contract;
+    class DON,Bridge,APIs external;
 ```
 
-**Security Implementation:**
-- State updates precede ETH transfers (reentrancy prevention)
-- Automatic reversion for non-winners or duplicate claims
+---
+
+## Smart Contract Deep Dive
+
+### 1. `TrigslinkVault.sol` (The Hub)
+
+This is the master settlement contract. It operates deterministically and has **no human owner**.
+
+- **`placeBet(string _marketId, uint8 _outcome)`**: Accepts incoming capital, tracking exact weights on Outcome 1 (YES) and Outcome 2 (NO) to enable dynamic odds calculation.
+- **`resolveMarket(string _marketId, uint8 _outcome)`**: The settlement lock. This function enforces strict access control—**only** the `TrigslinkManager` can call it. No human, multisig, or DAO can manually alter a market's outcome.
+- **`claimWinnings(string _marketId)`**: Unlocks capital the second the market is resolved. Uses proportional payout math `(userBet * totalPool) / winningPool` to ensure fair distribution of the losing side's liquidity to the winners.
+
+### 2. `TrigslinkManager.sol` (The Brain)
+
+This contract replaces the legacy "Optimistic Oracle" dispute period. It acts as a Decentralized API (dAPI) client using Chainlink Functions.
+
+- **`triggerMarketResolution(...)`**: Initiates the AI verification process. It packages the market query (e.g., "Did the AI Bill pass the Senate?") and sends it to the Chainlink Decentralized Oracle Network (DON).
+- **`fulfillRequest(...)`**: The callback function. Within ~15 seconds, the DON reaches a consensus on the truth and returns the data here. If consensus is reached, it autonomously calls `resolveMarket` on the Vault. If nodes disagree, it reverts, triggering the protocol's **Extended Verification Mode** to protect user funds from data glitches.
+
+### 3. `TrigslinkCrossChain.sol` (The Bridge / ULR)
+
+This contract solves liquidity fragmentation. Deployed on satellite networks, it acts as a localized proxy for the main Vault.
+
+- **`placeCrossChainBet(...)`**: A user inputs their bet on a satellite chain. This contract pulls their tokens, encodes their chosen outcome and address, and packages it into a `Client.EVM2AnyMessage`.
+- **CCIP Routing**: It pays the Chainlink relayer fees (in LINK or native gas) and securely transmits both the financial payload and the user's data across the bridge, directly depositing it into the master `TrigslinkVault`.
 
 ---
 
-## 🚀 Getting Started
+## The 15-Second Resolution Sequence
 
-### Prerequisites
-- Node.js (v16+)
-- npm or yarn
-- Basic familiarity with Hardhat
+The core innovation of Trigslink is collapsing multi-day dispute windows into a single block-cycle. Here is the exact lifecycle of a market resolution:
 
-### Installation
+```mermaid
+sequenceDiagram
+    participant U as Any User
+    participant M as TrigslinkManager
+    participant DON as Chainlink Nodes
+    participant V as TrigslinkVault
 
+    Note over U, V: Market Event Concludes
+    
+    U->>M: triggerMarketResolution(marketId, query)
+    activate M
+    M->>DON: _sendRequest(JavaScript Source, query)
+    deactivate M
+    
+    Note over DON: Nodes execute AI script,<br/>scrape news, reach consensus
+    
+    DON-->>M: fulfillRequest(requestId, outcome, err)
+    activate M
+    
+    alt Error or No Consensus
+        M--xM: Revert ("AI Grounding Failed")
+        Note right of M: Market pauses for safety
+    else Consensus Reached
+        M->>V: vault.resolveMarket(marketId, outcome)
+        activate V
+        V-->>V: market.resolved = true
+        V-->>U: emit MarketResolved(outcome)
+        deactivate V
+    end
+    deactivate M
+    
+    Note over U, V: Winners can immediately call claimWinnings()
+```
+
+---
+
+## Local Development & Testing
+
+Trigslink relies on complex cross-contract integration. To test the local ecosystem:
+
+1. **Install Dependencies:**
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/trigslink-contract.git
-
-# Navigate to project directory
-cd trigslink-contract
-
-# Install dependencies
 npm install
+npm install @chainlink/contracts @chainlink/contracts-ccip
 ```
 
----
-
-## 💻 Development
-
-This repository leverages **Hardhat v2.22.17** for a stable, CommonJS-compatible development environment.
-
-### Compile Contract
-
-Generate ABIs and TypeChain typings:
-
-```bash
-npx hardhat compile
-```
-
-**Expected Output:**
-```
-Compiled 1 Solidity file successfully
-Artifacts generated in ./artifacts
-TypeChain typings generated in ./typechain-types
-```
-
-### Run Tests
-
-Execute the comprehensive test suite to verify manager constraints and payout mathematics:
-
+2. **Run the Integration Test Suite:**
+Because the Vault and Manager require each other's addresses to deploy, the test suite utilizes `ethers.getCreateAddress` nonce-prediction to perfectly wire the ecosystem together locally, combined with a `MockFunctionsRouter` to simulate the Chainlink network.
 ```bash
 npx hardhat test
 ```
 
-**Test Coverage Includes:**
-- ✅ Manager-only resolution enforcement
-- ✅ Proportional payout calculations
-- ✅ Reentrancy protection
-- ✅ Edge case handling
+---
+
+## Security & Risk Isolation
+
+- **Reentrancy Protection:** State changes in `claimWinnings` (zeroing out user balances) occur *strictly before* the external ETH transfer.
+- **Heuristic Inference Protection:** Resolution logic is hard-coded into the Chainlink DON deployment script. The "Truth" is decoupled from token-weighted voting, eliminating bribery vectors.
+- **Cross-Chain Safety:** The CCIP implementation uses a "lock-and-mint" security model. Funds locked on the satellite chain are only minted on the main chain once the CCIP message is finalized by the Risk Management Network.
 
 ---
 
-## 🗺️ Roadmap: Universal Liquidity Rails (ULR)
+## License
 
-The current vault establishes our foundation. **Phase 2** introduces cross-chain expansion through Chainlink CCIP integration:
-
-### 🌉 Universal Liquidity Rails
-
-| Feature | Description |
-|---------|-------------|
-| **L2 Compatibility** | Users on Base, Arbitrum, and Optimism can participate |
-| **Cross-Chain Liquidity** | Bet against pools on Ethereum or Solana |
-| **Unified Experience** | Seamless interface across ecosystems |
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License—see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🤝 Contributing
-
-We welcome contributions from the community. Please review our contribution guidelines before submitting pull requests.
-
----
-
-## ⚠️ Security Considerations
-
-- **Manager Address:** This immutable reference must point to trusted, verified autonomous code
-- **Market Resolution:** Only the manager can resolve markets—no backdoors exist
-- **Reentrancy Protection:** State updates consistently precede external calls
-
----
-
-## 📬 Contact & Support
-
-- **Documentation:** [trigs.link](https://trigs.link)
-- **Email** [Reach out to us](mailto:trigslink@gmail.com)
-- **Twitter:** [@Trigslink](https://twitter.com/Trigslink)
-
----
-
-*Built for the autonomous future of finance.*
+This project is licensed under the MIT License.
