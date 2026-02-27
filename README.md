@@ -38,8 +38,8 @@ graph TD
         DON <-->|Scrapes APIs/News| APIs[Official News Wires]
     end
 
-    classDef contract fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#fff;
-    classDef external fill:#0f766e,stroke:#14b8a6,stroke-width:2px,color:#fff;
+    classDef contract fill:#627eea,stroke:#1c3faa,stroke-width:2px,color:#fff;
+    classDef external fill:#f6851b,stroke:#c96c15,stroke-width:2px,color:#fff;
     
     class Vault,Manager,CC_Sender contract;
     class DON,Bridge,APIs external;
