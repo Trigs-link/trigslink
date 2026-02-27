@@ -1,8 +1,10 @@
-# Trigslink Protocol: Autonomous Settlement & Universal Liquidity Rails
+# 🔗 Trigslink SDK: Smart Contract Infrastructure
 
-Trigslink is a decentralized infrastructure protocol designed to eliminate the "Zombie Period" of capital lockup in prediction markets. By replacing human-driven dispute windows with a machine-verified truth engine, Trigslink achieves ~15-second settlement finality.
+This repository contains the foundational smart contracts powering the Trigslink SDK. 
 
-Furthermore, the protocol utilizes **Universal Liquidity Rails (ULR)** via Chainlink CCIP to unify fragmented cross-chain capital into a single global truth pool.
+Trigslink is a decentralized infrastructure protocol designed to eliminate the "Zombie Period" of capital lockup in prediction markets. By replacing human-driven dispute windows with a deterministic, machine-verified truth engine, these contracts execute 15-second settlement finality directly on-chain.
+
+Furthermore, this contract suite implements the protocol's **Universal Liquidity Rails (ULR)** via Chainlink CCIP, providing the execution logic required to unify fragmented cross-chain capital into a single global truth pool.
 
 ---
 
