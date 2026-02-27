@@ -1,4 +1,4 @@
-# 🔗 Trigslink SDK: Smart Contract Infrastructure
+# Trigslink SDK: Smart Contract Infrastructure
 
 This repository contains the foundational smart contracts powering the Trigslink SDK. 
 
