@@ -47,7 +47,7 @@ graph TD
 
 ---
 
-## Smart Contract Deep Dive
+## Smart Contract Deep Dives
 
 ### 1. `TrigslinkVault.sol` (The Hub)
 
