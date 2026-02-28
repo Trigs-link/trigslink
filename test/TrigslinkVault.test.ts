@@ -2,104 +2,145 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("TrigslinkVault", function () {
-  // --- FIXTURE: Deploys the contract once and snapshots the state ---
+describe("TrigslinkVault - CRE Autonomous Execution", function () {
+  // We use a fixture to deploy the contract once and reset the state instantly between tests
   async function deployVaultFixture() {
-    const [deployer, trigslinkManager, user1, user2] = await ethers.getSigners();
+    const [deployer, user1, user2, mockChainlinkForwarder] = await ethers.getSigners();
 
     const Vault = await ethers.getContractFactory("TrigslinkVault");
-    // Pass the Manager address to the constructor
-    const vault = await Vault.deploy(trigslinkManager.address);
+    // We pass the mock forwarder's address to simulate the Chainlink Network
+    const vault = await Vault.deploy(mockChainlinkForwarder.address);
 
-    return { vault, deployer, trigslinkManager, user1, user2 };
+    return { vault, deployer, user1, user2, mockChainlinkForwarder };
   }
 
-  describe("Deployment", function () {
-    it("Should set the correct TrigslinkManager address", async function () {
-      const { vault, trigslinkManager } = await loadFixture(deployVaultFixture);
-      expect(await vault.trigslinkManager()).to.equal(trigslinkManager.address);
-    });
-  });
+  describe("1. Market Creation & Safety", function () {
+    it("Should successfully create a market and log the AI question", async function () {
+      const { vault } = await loadFixture(deployVaultFixture);
+      
+      const marketId = "ETH_5K_2026";
+      const question = "Will Ethereum's price exceed $5,000 on Jan 1st, 2026?";
 
-  describe("Placing Bets", function () {
-    it("Should allow a user to bet on YES (Outcome 1) and update pools", async function () {
-      const { vault, user1 } = await loadFixture(deployVaultFixture);
-      const marketId = "ETH_ETF_APPROVAL";
-      const betAmount = ethers.parseEther("1.0");
-
-      // Place bet on outcome 1
-      await expect(vault.connect(user1).placeBet(marketId, 1, { value: betAmount }))
-        .to.emit(vault, "BetPlaced")
-        .withArgs(marketId, user1.address, 1, betAmount);
+      await expect(vault.createMarket(marketId, question))
+        .to.emit(vault, "MarketCreated")
+        .withArgs(marketId, question);
 
       const market = await vault.markets(marketId);
-      expect(market.totalPool).to.equal(betAmount);
-      expect(market.outcome1Pool).to.equal(betAmount);
-      expect(market.outcome2Pool).to.equal(0n);
+      expect(market.question).to.equal(question);
     });
 
-    it("Should reject bets with invalid outcomes", async function () {
+    it("Should REJECT bets on ghost markets (The Vulnerability Patch)", async function () {
       const { vault, user1 } = await loadFixture(deployVaultFixture);
-      const marketId = "ETH_ETF_APPROVAL";
+      
       const betAmount = ethers.parseEther("1.0");
-
-      // Attempting to bet on outcome '3' should fail
-      await expect(vault.connect(user1).placeBet(marketId, 3, { value: betAmount }))
-        .to.be.revertedWith("Invalid outcome. Use 1 or 2.");
+      // Trying to bet on a market that hasn't been created yet
+      await expect(
+        vault.connect(user1).placeBet("FAKE_MARKET", 1, { value: betAmount })
+      ).to.be.revertedWith("Market does not exist");
     });
   });
 
-  describe("Autonomous Resolution & Payouts", function () {
-    it("Should allow ONLY the Manager to resolve the market", async function () {
-      const { vault, deployer, trigslinkManager } = await loadFixture(deployVaultFixture);
-      const marketId = "AI_BILL_PASS";
-      
-      // Original deployer (human) tries and fails
-      await expect(vault.connect(deployer).resolveMarket(marketId, 1))
-        .to.be.revertedWith("Only Trigslink Manager can resolve");
+  describe("2. Betting & The CRE Trigger", function () {
+    it("Should accept valid bets and track the pools accurately", async function () {
+      const { vault, user1, user2 } = await loadFixture(deployVaultFixture);
+      const marketId = "AI_ACT";
+      await vault.createMarket(marketId, "Will the EU AI Act pass in 2026?");
 
-      // The autonomous Manager succeeds
-      await expect(vault.connect(trigslinkManager).resolveMarket(marketId, 1))
+      const betAmount1 = ethers.parseEther("1.0");
+      const betAmount2 = ethers.parseEther("2.0");
+
+      // User 1 bets YES (Outcome 1)
+      await vault.connect(user1).placeBet(marketId, 1, { value: betAmount1 });
+      // User 2 bets NO (Outcome 2)
+      await vault.connect(user2).placeBet(marketId, 2, { value: betAmount2 });
+
+      const market = await vault.markets(marketId);
+      expect(market.totalPool).to.equal(ethers.parseEther("3.0"));
+      expect(market.outcome1Pool).to.equal(betAmount1);
+      expect(market.outcome2Pool).to.equal(betAmount2);
+    });
+
+    it("Should emit the SettlementRequested event to wake up the off-chain Chainlink workflow", async function () {
+      const { vault, user1 } = await loadFixture(deployVaultFixture);
+      const marketId = "AI_ACT";
+      const question = "Will the EU AI Act pass in 2026?";
+      await vault.createMarket(marketId, question);
+
+      // Anyone can trigger the settlement request
+      await expect(vault.connect(user1).requestSettlement(marketId))
+        .to.emit(vault, "SettlementRequested")
+        .withArgs(marketId, question);
+    });
+  });
+
+  describe("3. Autonomous Settlement & Winnings", function () {
+    it("Should ALLOW the Chainlink Forwarder to push the AI report via onReport", async function () {
+      const { vault, mockChainlinkForwarder } = await loadFixture(deployVaultFixture);
+      const marketId = "AI_ACT";
+      await vault.createMarket(marketId, "Question?");
+
+      // Simulate the TypeScript CRE workflow formatting the answer (Outcome 1 = YES)
+      const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+      const reportBytes = abiCoder.encode(["string", "uint8"], [marketId, 1]);
+      const emptyMetadata = "0x";
+
+      // The mock forwarder pushes the result
+      await expect(
+        vault.connect(mockChainlinkForwarder).onReport(emptyMetadata, reportBytes)
+      )
         .to.emit(vault, "MarketResolved")
         .withArgs(marketId, 1);
+
+      const market = await vault.markets(marketId);
+      expect(market.resolved).to.be.true;
     });
 
-    it("Should calculate and distribute winnings proportionally", async function () {
-      const { vault, trigslinkManager, user1, user2 } = await loadFixture(deployVaultFixture);
-      const marketId = "SOL_BREAKS_300";
-      
-      // Setup the pool
-      // User 1 bets 1 ETH on YES (1)
+    it("Should REJECT onReport calls from anyone else (Access Control)", async function () {
+      const { vault, user1 } = await loadFixture(deployVaultFixture);
+      const marketId = "AI_ACT";
+      await vault.createMarket(marketId, "Question?");
+
+      const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+      const reportBytes = abiCoder.encode(["string", "uint8"], [marketId, 1]);
+
+      // A random user tries to hack the settlement
+      await expect(
+        vault.connect(user1).onReport("0x", reportBytes)
+      ).to.be.revertedWith("Only Chainlink DON can resolve");
+    });
+
+    it("Should correctly calculate and distribute the proportional payouts", async function () {
+      const { vault, user1, user2, mockChainlinkForwarder } = await loadFixture(deployVaultFixture);
+      const marketId = "AI_ACT";
+      await vault.createMarket(marketId, "Question?");
+
+      // User 1 bets 1 ETH on YES
       await vault.connect(user1).placeBet(marketId, 1, { value: ethers.parseEther("1.0") });
-      // User 2 bets 3 ETH on NO (2)
+      // User 2 bets 3 ETH on NO
       await vault.connect(user2).placeBet(marketId, 2, { value: ethers.parseEther("3.0") });
 
-      // Total Pool is now 4 ETH. 
-      // Manager resolves the market as YES (1).
-      await vault.connect(trigslinkManager).resolveMarket(marketId, 1);
+      // Total Pool is 4 ETH. 
 
-      // User 1 claims their winnings. Since they were the ONLY winner, 
-      // they should receive the entire 4 ETH pool.
-      await expect(vault.connect(user1).claimWinnings(marketId))
-        .to.changeEtherBalances(
-          [vault, user1],
-          [-ethers.parseEther("4.0"), ethers.parseEther("4.0")]
-        );
-    });
+      // Chainlink DON resolves the market to YES (Outcome 1)
+      const reportBytes = ethers.AbiCoder.defaultAbiCoder().encode(["string", "uint8"], [marketId, 1]);
+      await vault.connect(mockChainlinkForwarder).onReport("0x", reportBytes);
 
-    it("Should prevent losers from claiming payouts", async function () {
-      const { vault, trigslinkManager, user1, user2 } = await loadFixture(deployVaultFixture);
-      const marketId = "SOL_BREAKS_300";
+      // User 1 was the only winner, so they should get the entire 4 ETH pool
+      const user1BalanceBefore = await ethers.provider.getBalance(user1.address);
       
-      await vault.connect(user1).placeBet(marketId, 1, { value: ethers.parseEther("1.0") });
-      await vault.connect(user2).placeBet(marketId, 2, { value: ethers.parseEther("1.0") });
+      const claimTx = await vault.connect(user1).claimWinnings(marketId);
+      const receipt = await claimTx.wait();
+      const gasSpent = receipt!.gasUsed * receipt!.gasPrice;
 
-      // Manager resolves as YES (1)
-      await vault.connect(trigslinkManager).resolveMarket(marketId, 1);
+      const user1BalanceAfter = await ethers.provider.getBalance(user1.address);
+      
+      // Balance After = Balance Before + 4 ETH - Gas Spent
+      expect(user1BalanceAfter + gasSpent - user1BalanceBefore).to.equal(ethers.parseEther("4.0"));
 
-      // User 2 (who bet NO) tries to claim and is rightfully rejected
-      await expect(vault.connect(user2).claimWinnings(marketId))
-        .to.be.revertedWith("No winning bets to claim");
+      // User 2 (Loser) tries to claim and fails
+      await expect(
+        vault.connect(user2).claimWinnings(marketId)
+      ).to.be.revertedWith("No winning bets to claim");
     });
   });
 });
