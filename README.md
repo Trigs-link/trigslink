@@ -27,7 +27,7 @@ The Trigslink ecosystem has been upgraded to utilize the **Chainlink Runtime Env
     'primaryBorderColor': '#1c3faa',
     'lineColor': '#f6851b',
     'secondaryColor': '#3498db',
-    'tertiaryColor': '#2ecc71',
+    'tertiaryColor': '#6b7280',
     'fontFamily': 'Inter, system-ui, sans-serif',
     'background': '#0b0f1c'
   }
