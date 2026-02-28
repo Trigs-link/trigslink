@@ -13,7 +13,18 @@ contract TrigslinkCCIP {
 
     event CrossChainBetSent(
         bytes32 indexed messageId,
-        uint64 indexed
+        uint64 indexed destainationChainSelector,
+        string marketId,
+        uint8 outcome,
+        uint256 amount
+    );
 
-    )
+    constructor(address _router, address _linktoken) {
+        router = IRouterClient(_router);
+        linkToken = IERC20(_linktoken); 
+    }
+
+    function setDestinationVault (uint64 _chainselector, address _vault) external {
+        
+    }
 }
