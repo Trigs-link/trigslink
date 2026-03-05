@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.20;
 
 interface IReceiver {
     function onReport(bytes calldata metadata, bytes calldata report) external;
@@ -17,6 +17,7 @@ contract TrigslinkVault is IReceiver {
         uint256 outcome1Pool;
         uint256 outcome2Pool;
         string question;
+        string dataSource;
     }
 
     mapping(string => Market) public markets;
@@ -24,11 +25,11 @@ contract TrigslinkVault is IReceiver {
     mapping(string => mapping(address => mapping(uint8 => uint256))) public userBets;
 
     
-    event MarketCreated(string indexed marketId, string question);
+    event MarketCreated(string indexed marketId, string question, string dataSource);
     event BetPlaced(string indexed marketId, address indexed user, uint8 outcome, uint256 amount);
 
     // The critical event that wakes up offchain ai workflow
-    event SettlementRequested(string indexed marketId, string question);
+    event SettlementRequested(string indexed marketId, string question, string dataSource);
     event MarketResolved(string indexed marketId, uint8 outcome);
     event WinningsClaimed(string indexed marketId, address indexed user, uint256 payout);
 
@@ -36,10 +37,10 @@ contract TrigslinkVault is IReceiver {
         chainlinkForwarder = _chainlinkForwarder;
     }
 
-    function createMarket(string memory _marketId, string memory _question) external {
+    function createMarket(string memory _marketId, string memory _question, string memory _dataSource) external {
         require(bytes(markets[_marketId].marketId).length == 0, "Market Exists");
-        markets[_marketId] = Market(_marketId, false, 0, 0, 0, 0, _question);
-        emit MarketCreated(_marketId, _question);
+        markets[_marketId] = Market(_marketId, false, 0, 0, 0, 0, _question, _dataSource);
+        emit MarketCreated(_marketId, _question, _dataSource);
     }
 
     function placeBet(string memory _marketId, uint8 _outcome) external payable {
@@ -67,7 +68,7 @@ contract TrigslinkVault is IReceiver {
 
     function requestSettlement(string memory _marketId) external{
         require(!markets[_marketId].resolved, "Market already settled");
-        emit SettlementRequested(_marketId, markets[_marketId].question);
+        emit SettlementRequested(_marketId, markets[_marketId].question, markets[_marketId].dataSource);
     }
 
 

@@ -3,6 +3,8 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 describe("TrigslinkVault - CRE Autonomous Execution", function () {
+  const DUMMY_URL = "https://api.trigslink.com/v1/source";
+
   // We use a fixture to deploy the contract once and reset the state instantly between tests
   async function deployVaultFixture() {
     const [deployer, user1, user2, mockChainlinkForwarder] = await ethers.getSigners();
@@ -21,12 +23,14 @@ describe("TrigslinkVault - CRE Autonomous Execution", function () {
       const marketId = "ETH_5K_2026";
       const question = "Will Ethereum's price exceed $5,000 on Jan 1st, 2026?";
 
-      await expect(vault.createMarket(marketId, question))
+      // Updated to include 3 arguments and check 3 args in event
+      await expect(vault.createMarket(marketId, question, DUMMY_URL))
         .to.emit(vault, "MarketCreated")
-        .withArgs(marketId, question);
+        .withArgs(marketId, question, DUMMY_URL);
 
       const market = await vault.markets(marketId);
       expect(market.question).to.equal(question);
+      expect(market.dataSource).to.equal(DUMMY_URL); // Verify state storage
     });
 
     it("Should REJECT bets on ghost markets (The Vulnerability Patch)", async function () {
@@ -44,7 +48,8 @@ describe("TrigslinkVault - CRE Autonomous Execution", function () {
     it("Should accept valid bets and track the pools accurately", async function () {
       const { vault, user1, user2 } = await loadFixture(deployVaultFixture);
       const marketId = "AI_ACT";
-      await vault.createMarket(marketId, "Will the EU AI Act pass in 2026?");
+      // Updated to 3 arguments
+      await vault.createMarket(marketId, "Will the EU AI Act pass in 2026?", DUMMY_URL);
 
       const betAmount1 = ethers.parseEther("1.0");
       const betAmount2 = ethers.parseEther("2.0");
@@ -64,12 +69,14 @@ describe("TrigslinkVault - CRE Autonomous Execution", function () {
       const { vault, user1 } = await loadFixture(deployVaultFixture);
       const marketId = "AI_ACT";
       const question = "Will the EU AI Act pass in 2026?";
-      await vault.createMarket(marketId, question);
+      // Updated to 3 arguments
+      await vault.createMarket(marketId, question, DUMMY_URL);
 
       // Anyone can trigger the settlement request
+      // Updated to expect 3 arguments in the event emission
       await expect(vault.connect(user1).requestSettlement(marketId))
         .to.emit(vault, "SettlementRequested")
-        .withArgs(marketId, question);
+        .withArgs(marketId, question, DUMMY_URL);
     });
   });
 
@@ -77,7 +84,8 @@ describe("TrigslinkVault - CRE Autonomous Execution", function () {
     it("Should ALLOW the Chainlink Forwarder to push the AI report via onReport", async function () {
       const { vault, mockChainlinkForwarder } = await loadFixture(deployVaultFixture);
       const marketId = "AI_ACT";
-      await vault.createMarket(marketId, "Question?");
+      // Updated to 3 arguments
+      await vault.createMarket(marketId, "Question?", DUMMY_URL);
 
       // Simulate the TypeScript CRE workflow formatting the answer (Outcome 1 = YES)
       const abiCoder = ethers.AbiCoder.defaultAbiCoder();
@@ -98,7 +106,8 @@ describe("TrigslinkVault - CRE Autonomous Execution", function () {
     it("Should REJECT onReport calls from anyone else (Access Control)", async function () {
       const { vault, user1 } = await loadFixture(deployVaultFixture);
       const marketId = "AI_ACT";
-      await vault.createMarket(marketId, "Question?");
+      // Updated to 3 arguments
+      await vault.createMarket(marketId, "Question?", DUMMY_URL);
 
       const abiCoder = ethers.AbiCoder.defaultAbiCoder();
       const reportBytes = abiCoder.encode(["string", "uint8"], [marketId, 1]);
@@ -112,7 +121,8 @@ describe("TrigslinkVault - CRE Autonomous Execution", function () {
     it("Should correctly calculate and distribute the proportional payouts", async function () {
       const { vault, user1, user2, mockChainlinkForwarder } = await loadFixture(deployVaultFixture);
       const marketId = "AI_ACT";
-      await vault.createMarket(marketId, "Question?");
+      // Updated to 3 arguments
+      await vault.createMarket(marketId, "Question?", DUMMY_URL);
 
       // User 1 bets 1 ETH on YES
       await vault.connect(user1).placeBet(marketId, 1, { value: ethers.parseEther("1.0") });
