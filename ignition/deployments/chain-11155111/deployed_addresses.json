@@ -1,5 +1,7 @@
 {
   "TrigslinkSystem#TrigsToken": "0xc463bB636C67642870e2e82ebAdbd29e2C10eAFa",
   "TrigslinkSystem#TrigslinkVault": "0xaB9612273273Ca9AA61C35125E99C840651AA7E9",
-  "TrigslinkSystem#TrigslinkGovernance": "0x7f344B5b55eD8d386462F8Cf9BD739c8c7ac87db"
+  "TrigslinkSystem#TrigslinkGovernance": "0x7f344B5b55eD8d386462F8Cf9BD739c8c7ac87db",
+  "TrigslinkSystemV2#TrigslinkVault": "0xb0A1Aa0bfE5aAd4dC1AE84008Ecb89d4Ecc3bD7F",
+  "TrigslinkSystemV2#TrigslinkGovernance": "0xcacF8A1be612231414941023Db6D09Dc43d98291"
 }

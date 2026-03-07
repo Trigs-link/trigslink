@@ -6,8 +6,9 @@ interface IReceiver {
 }
 
 contract TrigslinkVault is IReceiver {
-
+    address public owner;
     address public chainlinkForwarder;
+    address public governanceContract;
 
     struct Market {
         string marketId;
@@ -18,6 +19,7 @@ contract TrigslinkVault is IReceiver {
         uint256 outcome2Pool;
         string question;
         string dataSource;
+        uint256 endTime;
     }
 
     mapping(string => Market) public markets;
@@ -25,7 +27,7 @@ contract TrigslinkVault is IReceiver {
     mapping(string => mapping(address => mapping(uint8 => uint256))) public userBets;
 
     
-    event MarketCreated(string indexed marketId, string question, string dataSource);
+    event MarketCreated(string indexed marketId, string question, string dataSource, uint256 endTime);
     event BetPlaced(string indexed marketId, address indexed user, uint8 outcome, uint256 amount);
 
     // The critical event that wakes up offchain ai workflow
@@ -34,23 +36,31 @@ contract TrigslinkVault is IReceiver {
     event WinningsClaimed(string indexed marketId, address indexed user, uint256 payout);
 
     constructor(address _chainlinkForwarder){
+        owner = msg.sender;
         chainlinkForwarder = _chainlinkForwarder;
+    }   
+
+    function setGovernanceAddress(address _governanceContract) external {
+        require(msg.sender == owner, "Only the owner can set the governance address"); 
+        require(governanceContract == address(0), "Governance already set!");
+        governanceContract = _governanceContract;
     }
 
-    function createMarket(string memory _marketId, string memory _question, string memory _dataSource) external {
+    function createMarket(string memory _marketId, string memory _question, string memory _dataSource, uint256 _endTime) external {
+        require(msg.sender == governanceContract, "Only Governance can create markets");
         require(bytes(markets[_marketId].marketId).length == 0, "Market Exists");
-        markets[_marketId] = Market(_marketId, false, 0, 0, 0, 0, _question, _dataSource);
-        emit MarketCreated(_marketId, _question, _dataSource);
+        markets[_marketId] = Market(_marketId, false, 0, 0, 0, 0, _question, _dataSource, _endTime);
+        emit MarketCreated(_marketId, _question, _dataSource, _endTime);
     }
 
     function placeBet(string memory _marketId, uint8 _outcome) external payable {
         require(msg.value > 0, "Bet must be greater than 0");
         require(_outcome == 1 || _outcome == 2, "Invalid outcome. Use 1 or 2.");
+        require(bytes(markets[_marketId].marketId).length != 0, "Market does not exist");
         require(!markets[_marketId].resolved, "Market already settled");
         
-        // THE FIX: Ensure the market was actually created first!
-        // This guarantees the AI has a valid question to read during settlement.
-        require(bytes(markets[_marketId].marketId).length != 0, "Market does not exist");
+        // ⏰ NEW: Block bets if the market has officially closed
+        require(block.timestamp < markets[_marketId].endTime, "Betting is closed! Market has ended.");
 
         markets[_marketId].totalPool += msg.value;
 
@@ -59,15 +69,16 @@ contract TrigslinkVault is IReceiver {
         } else {
             markets[_marketId].outcome2Pool += msg.value;
         }
-
         userBets[_marketId][msg.sender][_outcome] += msg.value;
-        
         emit BetPlaced(_marketId, msg.sender, _outcome, msg.value);
     }
 
 
     function requestSettlement(string memory _marketId) external{
+        require(bytes(markets[_marketId].marketId).length != 0, "Market does not exist");
         require(!markets[_marketId].resolved, "Market already settled");
+        require(block.timestamp >= markets[_marketId].endTime, "Market event has not finished yet!");
+        
         emit SettlementRequested(_marketId, markets[_marketId].question, markets[_marketId].dataSource);
     }
 

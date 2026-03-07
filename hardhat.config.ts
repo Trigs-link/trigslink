@@ -9,10 +9,10 @@ const config: HardhatUserConfig = {
   networks: {
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL || "",
-      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      // We changed PRIVATE_KEY to DEPLOYER_PRIVATE_KEY to perfectly match your .env
+      accounts: process.env.DEPLOYER_PRIVATE_KEY !== undefined ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
     },
   },
-  // Ensure this is inside the config object
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
