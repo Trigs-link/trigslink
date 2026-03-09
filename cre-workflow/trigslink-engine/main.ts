@@ -63,15 +63,17 @@ function fetchJina(sendRequester: HTTPSendRequester, url: string): string {
 
 const initWorkflow = (config: Config) => {
   // 1. Initialize directly. Skip getNetwork() to avoid WASM memory panics.
-  const evmClient = new EVMClient(16015286601757825753n);
+  const evmClient = new EVMClient(11155111n);
   const httpClient = new HTTPClient();
 
     // =====================================================================
     // 🛡️ PHASE 1: THE GATEKEEPER
     // ===========================================a==========================
-    const spamTopic = "566085a86477e6840748439a3f33968393e9447e7d61b6c0e86b9991206140f0";
+    const spamTopic = keccak256(
+      toBytes("ProposalCreated(uint256,string,address,string,string,uint256)")
+    );
     const spamTrigger = evmClient.logTrigger({
-        addresses: [hexToBase64("a3c6e2b06b3c511d52e7682ba0aec234f2ba692a")], // <-- UPDATE THIS LATER
+        addresses: [hexToBase64("0xa3c6e2b06b3c511d52e7682ba0aec234f2ba692a")], // <-- UPDATE THIS LATER
         topics: [{ values: [spamTopic] }]
     });
 
@@ -154,9 +156,11 @@ const initWorkflow = (config: Config) => {
     // =====================================================================
     // ⚖️ PHASE 2: THE TRUTH ENGINE
     // =====================================================================
-    const resolutionTopic = "ad02c81676648037a346e9944749468393e9447e7d61b6c0e86b9991206140f0";
+    const resolutionTopic = keccak256(
+      toBytes("ResolutionRequested(string,string,string)")
+    );
     const resolutionTrigger = evmClient.logTrigger({
-        addresses: [hexToBase64("b989aab780ae15e3820f8d97ae84d1bbb91914d2")], // <-- UPDATE THIS LATER
+        addresses: [hexToBase64("b989aaB780ae15E3820f8d97aE84D1bBB91914D2")], // <-- UPDATE THIS LATER
         topics: [{ values: [resolutionTopic] }]
     });
 

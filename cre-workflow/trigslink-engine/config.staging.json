@@ -1,12 +1,12 @@
 {
   "capabilities": {
     "eth_rpc": {
-      "evm:16015286601757825753": "https://ethereum-sepolia-rpc.publicnode.com"
+      "evm:11155111": "https://ethereum-sepolia-rpc.publicnode.com"
     },
     "secrets": {
-      "GEMINI_API_KEY": "GEMINI_API_KEY",
-      "GROQ_API_KEY": "GROQ_API_KEY",
-      "OPENROUTER_API_KEY": "OPENROUTER_API_KEY"
+      "GEMINI_API_KEY": "CRE_GEMINI_API_KEY",
+      "GROQ_API_KEY": "CRE_GROQ_API_KEY",
+      "OPENROUTER_API_KEY": "CRE_OPENROUTER_API_KEY"
     }
   }
 }
