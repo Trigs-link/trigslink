@@ -40,7 +40,7 @@ contract TrigslinkGovernance is ReentrancyGuard {
     mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => mapping(address => bool)) public hasVoted;
 
-    event MarketProposed(uint256 indexed proposalId, string marketId, address indexed creator, string question, uint256 stakeAmount, uint256 marketEndTime);
+    event MarketProposed(uint256 indexed proposalId, address indexed creator, string marketId, string question, string dataSource, uint256 stakeAmount, uint256 marketEndTime);
     event SpamCheckCompleted(uint256 indexed proposalId, bool isSpam);
     event Voted(uint256 indexed proposalId, address indexed voter, bool support, uint256 weight);
     event MarketExecuted(uint256 indexed proposalId, string marketId, bool passed);
@@ -82,7 +82,7 @@ contract TrigslinkGovernance is ReentrancyGuard {
             spamChecked: false
         });
 
-        emit MarketProposed(proposalCount, _marketId, msg.sender, _question, msg.value, _marketEndTime);
+        emit MarketProposed(proposalCount, msg.sender, _marketId, _question, _dataSource, msg.value, _marketEndTime);
     }
 
     /**

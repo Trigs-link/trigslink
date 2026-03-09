@@ -1,6 +1,6 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-export default buildModule("TrigslinkSystemV2", (m) => {
+export default buildModule("TrigslinkSystemV3", (m) => {
   // ==========================================
   // 🛑 SETUP YOUR ADDRESSES HERE
   // ==========================================

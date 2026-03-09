@@ -31,7 +31,7 @@ contract TrigslinkVault is IReceiver {
     event BetPlaced(string indexed marketId, address indexed user, uint8 outcome, uint256 amount);
 
     // The critical event that wakes up offchain ai workflow
-    event SettlementRequested(string indexed marketId, string question, string dataSource);
+    event SettlementRequested(string marketId, string question, string dataSource);
     event MarketResolved(string indexed marketId, uint8 outcome);
     event WinningsClaimed(string indexed marketId, address indexed user, uint256 payout);
 

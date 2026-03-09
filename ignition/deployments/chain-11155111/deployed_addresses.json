@@ -3,5 +3,7 @@
   "TrigslinkSystem#TrigslinkVault": "0xaB9612273273Ca9AA61C35125E99C840651AA7E9",
   "TrigslinkSystem#TrigslinkGovernance": "0x7f344B5b55eD8d386462F8Cf9BD739c8c7ac87db",
   "TrigslinkSystemV2#TrigslinkVault": "0xb0A1Aa0bfE5aAd4dC1AE84008Ecb89d4Ecc3bD7F",
-  "TrigslinkSystemV2#TrigslinkGovernance": "0xcacF8A1be612231414941023Db6D09Dc43d98291"
+  "TrigslinkSystemV2#TrigslinkGovernance": "0xcacF8A1be612231414941023Db6D09Dc43d98291",
+  "TrigslinkSystemV3#TrigslinkVault": "0xb989aaB780ae15E3820f8d97aE84D1bBB91914D2",
+  "TrigslinkSystemV3#TrigslinkGovernance": "0xA3c6E2b06B3c511d52e7682Ba0Aec234F2BA692a"
 }
