@@ -9,22 +9,22 @@ Whatever the real-world outcome is, Trigslink uses objective, verifiable AI cons
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [The AI Mesh (Gatekeeper & Truth Engine)](#the-ai-mesh-gatekeeper--truth-engine)
-- [Contracts / Architecture](#contracts--architecture)
-  - [TrigslinkGovernance.sol](#trigslinkgovernancesol)
-  - [TrigslinkVault.sol](#trigslinkvaultsol)
-  - [TrigsToken.sol](#trigstokensol)
-- [System Actors](#system-actors)
-- [Chainlink Integrations](#chainlink-integrations)
-  - [Custom Runtime Environment (CRE)](#custom-runtime-environment-cre)
-  - [CCIP (Future Roadmap)](#ccip-future-roadmap)
-- [Transaction Flows](#transaction-flows)
-  - [Market Proposal & Curation](#market-proposal--curation)
-  - [Betting & Settlement](#betting--settlement)
-- [Testnet Deployments](#testnet-deployments)
-- [Challenges I Ran Into](#challenges-i-ran-into)
-- [Future Developments](#future-developments)
+* [Overview](#overview)
+* [The AI Mesh (Gatekeeper & Truth Engine)](#the-ai-mesh-gatekeeper--truth-engine)
+* [Contracts / Architecture](#contracts--architecture)
+* [TrigslinkGovernance.sol](#trigslinkgovernancesol)
+* [TrigslinkVault.sol](#trigslinkvaultsol)
+* [TrigsToken.sol](#trigstokensol)
+* [System Actors](#system-actors)
+* [Chainlink Integrations](#chainlink-integrations)
+* [Custom Runtime Environment (CRE)](#custom-runtime-environment-cre)
+* [CCIP (Future Roadmap)](#ccip-future-roadmap)
+* [Transaction Flows](#transaction-flows)
+* [Market Proposal & Curation](#market-proposal--curation)
+* [Betting & Settlement](#betting--settlement)
+* [Testnet Deployments](#testnet-deployments)
+* [Challenges I Ran Into](#challenges-i-ran-into)
+* [Future Developments](#future-developments)
 
 ---
 
@@ -42,9 +42,9 @@ Users stake ETH to propose markets. The AI Mesh immediately audits the proposal 
 
 Trigslink does not rely on a single point of failure for its intelligence. We utilize a **Multi-Model Consensus Mesh** operating inside the Chainlink CRE sandbox.
 
-- **Gemini 2.5 Flash:** Acts as the lead logic engine, checking if the question is "future-facing" and fetching live data to resolve outcomes.
-- **Llama-3 70B (via Groq):** Acts as the high-speed timekeeper and cross-referencer.
-- **Mistral (via OpenRouter):** Acts as the objectivity auditor to ensure proposal rules are not biased.
+* **Gemini 2.5 Flash:** Acts as the lead logic engine, checking if the question is "future-facing" and fetching live data to resolve outcomes.
+* **Llama-3 70B (via Groq):** Acts as the high-speed timekeeper and cross-referencer.
+* **Mistral (via OpenRouter):** Acts as the objectivity auditor to ensure proposal rules are not biased.
 
 For a market to pass curation, or for an outcome to be resolved, Trigslink requires a strict **2/3 Majority Consensus** from these models.
 
@@ -54,26 +54,49 @@ For a market to pass curation, or for an outcome to be resolved, Trigslink requi
 
 The Trigslink system consists of a deeply integrated network of smart contracts deployed on the Sepolia Testnet, interacting continuously with off-chain Chainlink infrastructure.
 
-*[ 🖼️ INSERT EXCALIDRAW GRAPH HERE: "High-Level Architecture" - Show the user connecting to the smart contracts, the contracts emitting events to the CRE, and the CRE communicating with the AI Mesh]*
+```mermaid
+graph LR
+    User((User)) -->|Stake ETH & Propose| Gov[TrigslinkGovernance.sol]
+    User -->|Trade & Claim| Vault[TrigslinkVault.sol]
+    
+    Gov -->|MarketProposed Event| CRE
+    Vault -->|SettlementRequested Event| CRE
+
+    subgraph "Chainlink CRE (Off-Chain WASM)"
+        CRE{CRE Sandbox}
+        Mesh[AI Consensus Mesh]
+        CRE <-->|HTTP / API| Mesh
+    end
+
+    Mesh -.->|Validates / Resolves| CRE
+    CRE -->|submitSpamCheck()| Gov
+    CRE -->|onReport()| Vault
+    
+    style User fill:#3b82f6,stroke:#1d4ed8,color:#fff
+    style Gov fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#1e293b
+    style Vault fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#1e293b
+    style CRE fill:#eff6ff,stroke:#3b82f6,stroke-width:3px,color:#1e3a8a
+    style Mesh fill:#f5f3ff,stroke:#8b5cf6,stroke-width:2px,color:#4c1d95
+```
 
 ### TrigslinkGovernance.sol
 
 The `TrigslinkGovernance` contract is the curation hub. It tracks system-wide state for new proposals before they are allowed into the trading vault.
 
-- `proposeMarket()`: Users must stake a `proposalStakeRequired` (in ETH) to suggest a market. This deters bad actors.
-- `submitSpamCheck()`: A restricted endpoint exclusively called by the CRE Gatekeeper node to write the AI's spam verdict (`isSpam`) on-chain.
-- `vote()`: Token holders use `$TRIGS` to vote YES or NO on the proposal.
-- `executeProposal()`: If the market clears the AI check and community vote, it is pushed to the Vault. The proposer is refunded their stake *plus* a `successfulMarketReward`. If it is flagged as spam or voted down, the proposer's stake is slashed to the `treasury`.
+* `proposeMarket()`: Users must stake a `proposalStakeRequired` (in ETH) to suggest a market. This deters bad actors.
+* `submitSpamCheck()`: A restricted endpoint exclusively called by the CRE Gatekeeper node to write the AI's spam verdict (`isSpam`) on-chain.
+* `vote()`: Token holders use `$TRIGS` to vote YES or NO on the proposal.
+* `executeProposal()`: If the market clears the AI check and community vote, it is pushed to the Vault. The proposer is refunded their stake *plus* a `successfulMarketReward`. If it is flagged as spam or voted down, the proposer's stake is slashed to the `treasury`.
 
 ### TrigslinkVault.sol
 
 The `TrigslinkVault` manages the liquidity, betting, and resolution of live prediction markets.
 
-- `createMarket()`: Restricted to the Governance contract. Initializes the pools.
-- `placeBet()`: Allows users to bet ETH on Outcome 1 (Yes) or Outcome 2 (No) before the `endTime`.
-- `requestSettlement()`: A public permissionless function that emits the `SettlementRequested` event, waking up the CRE Truth Engine once the market `endTime` has passed.
-- `onReport()`: The Chainlink DON delivers the final, AI-verified outcome here, officially resolving the market.
-- `claimWinnings()`: Calculates proportional payouts for the winners based on the opposing pool's liquidity.
+* `createMarket()`: Restricted to the Governance contract. Initializes the pools.
+* `placeBet()`: Allows users to bet ETH on Outcome 1 (Yes) or Outcome 2 (No) before the `endTime`.
+* `requestSettlement()`: A public permissionless function that emits the `SettlementRequested` event, waking up the CRE Truth Engine once the market `endTime` has passed.
+* `onReport()`: The Chainlink DON delivers the final, AI-verified outcome here, officially resolving the market.
+* `claimWinnings()`: Calculates proportional payouts for the winners based on the opposing pool's liquidity.
 
 ### TrigsToken.sol
 
@@ -99,11 +122,36 @@ Trigslink leverages the bleeding edge of Chainlink's decentralized infrastructur
 
 Trigslink utilizes the **Chainlink CRE (v1.3.0 WASM Sandbox)** as the core engine, completely replacing legacy Automation and Functions patterns. The CRE allows us to write complex, long-running TypeScript workflows that execute natively within a secure WebAssembly environment.
 
-- **Log Triggers:** The CRE uses `evmClient.logTrigger` to listen natively to `MarketProposed` and `SettlementRequested` events.
-- **Decentralized Secrets:** We use `runtime.getSecret()` to securely manage API keys for Gemini, Groq, and OpenRouter across the DON.
-- **HTTP Requests:** The CRE `HTTPClient` allows us to proxy requests through `r.jina.ai` to scrape live webpage content (the market's `dataSource`) and feed it directly into the LLMs for contextual resolution.
+* **Log Triggers:** The CRE uses `evmClient.logTrigger` to listen natively to `MarketProposed` and `SettlementRequested` events.
+* **Decentralized Secrets:** We use `runtime.getSecret()` to securely manage API keys for Gemini, Groq, and OpenRouter across the DON.
+* **HTTP Requests:** The CRE `HTTPClient` allows us to proxy requests through `r.jina.ai` to scrape live webpage content (the market's `dataSource`) and feed it directly into the LLMs for contextual resolution.
 
-*[ 🖼️ INSERT EXCALIDRAW GRAPH HERE: "The CRE Gatekeeper Flow" - Show the Proposal event hitting the WASM sandbox, splitting out to Gemini, Llama, and Mistral, aggregating the votes, and returning a 2/3 consensus to the Governance contract]*
+```mermaid
+graph TD
+    Event[MarketProposed Event] --> WASM[Chainlink CRE WASM Sandbox]
+    
+    subgraph "Multi-LLM Mesh Audit"
+        WASM -->|Fetch Secret & Prompt| G[Gemini 2.5 Flash]
+        WASM -->|Fetch Secret & Prompt| L[Llama-3 70B via Groq]
+        WASM -->|Fetch Secret & Prompt| M[Mistral via OpenRouter]
+    end
+    
+    G --> Vote1[Vote: VALID/SPAM]
+    L --> Vote2[Vote: VALID/SPAM]
+    M --> Vote3[Vote: VALID/SPAM]
+    
+    Vote1 & Vote2 & Vote3 --> Consensus{2/3 Majority Reached?}
+    Consensus -->|Pass| Valid[isSpam = false]
+    Consensus -->|Fail| Spam[isSpam = true]
+    
+    Valid & Spam --> Gov[TrigslinkGovernance.sol]
+    
+    style WASM fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a
+    style G fill:#f5f3ff,stroke:#8b5cf6,color:#4c1d95
+    style L fill:#f5f3ff,stroke:#8b5cf6,color:#4c1d95
+    style M fill:#f5f3ff,stroke:#8b5cf6,color:#4c1d95
+    style Consensus fill:#3b82f6,stroke:#fff,color:#fff
+```
 
 ### CCIP (Future Roadmap)
 
@@ -117,14 +165,33 @@ Transaction flows differ based on the lifecycle stage of the prediction market.
 
 ### Market Proposal & Curation
 
-1. **User Initiates:** Proposer calls `proposeMarket()` with 0.01 ETH stake.
-2. **CRE Catches Event:** The WASM sandbox catches the `MarketProposed` log.
-3. **Gatekeeper Analysis:** The CRE queries the AI Mesh.
-4. **Spam Status Update:** The CRE DON sends a transaction to `submitSpamCheck()` confirming if the market is logically valid.
-5. **Community Vote:** Users call `vote()` using `$TRIGS`.
-6. **Execution:** After the voting period, `executeProposal()` is called. If approved, the contract calls `Vault.createMarket()` and refunds/rewards the proposer.
+```mermaid
+sequenceDiagram
+    participant U as Proposer
+    participant G as Governance.sol
+    participant C as Chainlink CRE
+    participant V as Curators ($TRIGS)
+    participant M as Vault.sol
 
-*[ 🖼️ INSERT EXCALIDRAW GRAPH HERE: "Market Proposal Flow" - Detail the step-by-step from User Staking -> CRE Audit -> Community Vote -> Vault Deployment]*
+    U->>G: proposeMarket() + 0.01 ETH
+    G->>C: Emits MarketProposed Event
+    C->>C: AI Mesh Audits Proposal (Gemini + Llama)
+    
+    alt AI Flags as Spam
+        C->>G: submitSpamCheck(isSpam = true)
+        G-->>U: Stake Slashed to Treasury
+    else AI Validates Logic
+        C->>G: submitSpamCheck(isSpam = false)
+        V->>G: vote(YES/NO) with $TRIGS
+        
+        alt Community Votes YES
+            G->>M: createMarket()
+            G-->>U: Refund Stake + Success Reward
+        else Community Votes NO
+            G-->>U: Stake Slashed to Treasury
+        end
+    end
+```
 
 ### Betting & Settlement
 
@@ -141,9 +208,9 @@ Transaction flows differ based on the lifecycle stage of the prediction market.
 
 Trigslink is deployed on the **Ethereum Sepolia Testnet**. We iterated through several versions; below are the V3 production contracts.
 
-- **TrigslinkGovernance V3:** [`0xA3c6E2b06B3c511d52e7682Ba0Aec234F2BA692a`](https://sepolia.etherscan.io/address/0xA3c6E2b06B3c511d52e7682Ba0Aec234F2BA692a)
-- **TrigslinkVault V3:** [`0xb989aaB780ae15E3820f8d97aE84D1bBB91914D2`](https://sepolia.etherscan.io/address/0xb989aaB780ae15E3820f8d97aE84D1bBB91914D2)
-- **TrigsToken ($TRIGS):** [`0xc463bB636C67642870e2e82ebAdbd29e2C10eAFa`](https://sepolia.etherscan.io/address/0xc463bB636C67642870e2e82ebAdbd29e2C10eAFa)
+* **TrigslinkGovernance V3:** [`0xA3c6E2b06B3c511d52e7682Ba0Aec234F2BA692a`](https://sepolia.etherscan.io/address/0xA3c6E2b06B3c511d52e7682Ba0Aec234F2BA692a)
+* **TrigslinkVault V3:** [`0xb989aaB780ae15E3820f8d97aE84D1bBB91914D2`](https://sepolia.etherscan.io/address/0xb989aaB780ae15E3820f8d97aE84D1bBB91914D2)
+* **TrigsToken ($TRIGS):** [`0xc463bB636C67642870e2e82ebAdbd29e2C10eAFa`](https://sepolia.etherscan.io/address/0xc463bB636C67642870e2e82ebAdbd29e2C10eAFa)
 
 ---
 
@@ -173,7 +240,7 @@ The AI needed to read live webpages to resolve markets, but standard web-scrapin
 
 ## Future Developments
 
-- **CCIP Cross-Chain Betting:** Fully integrating `TrigslinkCrossChain.sol` to allow liquidity deposits from Layer-2s (Arbitrum, Base, Optimism) directly into the Sepolia parent vault.
-- **Automated Market Making (AMM):** Transitioning from a parimutuel pool model to an AMM (like a CPMM) to allow users to trade shares dynamically before the market resolves.
-- **Yield-Bearing Deposits:** Routing the ETH locked in the Vault into Aave or Compound to generate yield for bettors while they wait for the market to resolve.
-- **CRE Workflow Optimization:** Leveraging advanced payload compression for the `onReport()` callback to reduce gas overhead when the AI submits its final verdict.
+* **CCIP Cross-Chain Betting:** Fully integrating `TrigslinkCrossChain.sol` to allow liquidity deposits from Layer-2s (Arbitrum, Base, Optimism) directly into the Sepolia parent vault.
+* **Automated Market Making (AMM):** Transitioning from a parimutuel pool model to an AMM (like a CPMM) to allow users to trade shares dynamically before the market resolves.
+* **Yield-Bearing Deposits:** Routing the ETH locked in the Vault into Aave or Compound to generate yield for bettors while they wait for the market to resolve.
+* **CRE Workflow Optimization:** Leveraging advanced payload compression for the `onReport()` callback to reduce gas overhead when the AI submits its final verdict.
