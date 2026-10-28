@@ -73,7 +73,7 @@ const initWorkflow = (config: Config) => {
       toBytes("ProposalCreated(uint256,string,address,string,string,uint256)")
     );
     const spamTrigger = evmClient.logTrigger({
-        addresses: [hexToBase64("0xa3c6e2b06b3c511d52e7682ba0aec234f2ba692a")], // <-- UPDATE THIS LATER
+        addresses: [hexToBase64("a3c6e2b06b3c511d52e7682ba0aec234f2ba692a")], // <-- UPDATE THIS LATER
         topics: [{ values: [spamTopic] }]
     });
 
@@ -160,7 +160,7 @@ const initWorkflow = (config: Config) => {
       toBytes("ResolutionRequested(string,string,string)")
     );
     const resolutionTrigger = evmClient.logTrigger({
-        addresses: [hexToBase64("b989aaB780ae15E3820f8d97aE84D1bBB91914D2")], // <-- UPDATE THIS LATER
+        addresses: [hexToBase64("b989aab780ae15e3820f8d97ae84d1bbb91914d2")], // <-- UPDATE THIS LATER
         topics: [{ values: [resolutionTopic] }]
     });
 

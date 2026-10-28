@@ -1,19 +1,21 @@
 # ==========================================================================
 # CRE WORKFLOW SETTINGS FILE
 # ==========================================================================
+
 staging-settings:
   user-workflow:
-    workflow-name: "trigslink-engine-staging"
+    workflow-name: trigslink-engine-staging
+
   workflow-artifacts:
-    workflow-path: "./main.ts"
-    config-path: "./config.staging.json"
-    secrets-path: "secrets.yaml" 
-    
+    workflow-path: ./.cre_build_tmp.js
+    secrets-path: ../secrets.yaml
+
+
 # ==========================================================================
 production-settings:
   user-workflow:
-    workflow-name: "trigslink-engine-production"
+    workflow-name: trigslink-engine-production
+
   workflow-artifacts:
-    workflow-path: "./main.ts"
-    config-path: "./config.production.json"
-    secrets-path: "secrets.yaml" 
+    workflow-path: ./.cre_build_tmp.js
+    secrets-path: ../secrets.yaml

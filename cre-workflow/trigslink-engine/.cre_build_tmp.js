@@ -10,604 +10,6 @@ var __export = (target, all) => {
     });
 };
 var __esm = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
-var version = "1.2.3";
-var BaseError;
-var init_errors = __esm(() => {
-  BaseError = class BaseError2 extends Error {
-    constructor(shortMessage, args = {}) {
-      const details = args.cause instanceof BaseError2 ? args.cause.details : args.cause?.message ? args.cause.message : args.details;
-      const docsPath = args.cause instanceof BaseError2 ? args.cause.docsPath || args.docsPath : args.docsPath;
-      const message = [
-        shortMessage || "An error occurred.",
-        "",
-        ...args.metaMessages ? [...args.metaMessages, ""] : [],
-        ...docsPath ? [`Docs: https://abitype.dev${docsPath}`] : [],
-        ...details ? [`Details: ${details}`] : [],
-        `Version: abitype@${version}`
-      ].join(`
-`);
-      super(message);
-      Object.defineProperty(this, "details", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: undefined
-      });
-      Object.defineProperty(this, "docsPath", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: undefined
-      });
-      Object.defineProperty(this, "metaMessages", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: undefined
-      });
-      Object.defineProperty(this, "shortMessage", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: undefined
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "AbiTypeError"
-      });
-      if (args.cause)
-        this.cause = args.cause;
-      this.details = details;
-      this.docsPath = docsPath;
-      this.metaMessages = args.metaMessages;
-      this.shortMessage = shortMessage;
-    }
-  };
-});
-function execTyped(regex, string) {
-  const match = regex.exec(string);
-  return match?.groups;
-}
-var bytesRegex;
-var integerRegex;
-var isTupleRegex;
-var init_regex = __esm(() => {
-  bytesRegex = /^bytes([1-9]|1[0-9]|2[0-9]|3[0-2])?$/;
-  integerRegex = /^u?int(8|16|24|32|40|48|56|64|72|80|88|96|104|112|120|128|136|144|152|160|168|176|184|192|200|208|216|224|232|240|248|256)?$/;
-  isTupleRegex = /^\(.+?\).*?$/;
-});
-function isStructSignature(signature) {
-  return structSignatureRegex.test(signature);
-}
-function execStructSignature(signature) {
-  return execTyped(structSignatureRegex, signature);
-}
-var structSignatureRegex;
-var modifiers;
-var eventModifiers;
-var functionModifiers;
-var init_signatures = __esm(() => {
-  init_regex();
-  structSignatureRegex = /^struct (?<name>[a-zA-Z$_][a-zA-Z0-9$_]*) \{(?<properties>.*?)\}$/;
-  modifiers = new Set([
-    "memory",
-    "indexed",
-    "storage",
-    "calldata"
-  ]);
-  eventModifiers = new Set(["indexed"]);
-  functionModifiers = new Set([
-    "calldata",
-    "memory",
-    "storage"
-  ]);
-});
-var UnknownTypeError;
-var UnknownSolidityTypeError;
-var init_abiItem = __esm(() => {
-  init_errors();
-  UnknownTypeError = class UnknownTypeError2 extends BaseError {
-    constructor({ type }) {
-      super("Unknown type.", {
-        metaMessages: [
-          `Type "${type}" is not a valid ABI type. Perhaps you forgot to include a struct signature?`
-        ]
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "UnknownTypeError"
-      });
-    }
-  };
-  UnknownSolidityTypeError = class UnknownSolidityTypeError2 extends BaseError {
-    constructor({ type }) {
-      super("Unknown type.", {
-        metaMessages: [`Type "${type}" is not a valid ABI type.`]
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "UnknownSolidityTypeError"
-      });
-    }
-  };
-});
-var InvalidAbiParametersError;
-var InvalidParameterError;
-var SolidityProtectedKeywordError;
-var InvalidModifierError;
-var InvalidFunctionModifierError;
-var InvalidAbiTypeParameterError;
-var init_abiParameter = __esm(() => {
-  init_errors();
-  InvalidAbiParametersError = class InvalidAbiParametersError2 extends BaseError {
-    constructor({ params }) {
-      super("Failed to parse ABI parameters.", {
-        details: `parseAbiParameters(${JSON.stringify(params, null, 2)})`,
-        docsPath: "/api/human#parseabiparameters-1"
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "InvalidAbiParametersError"
-      });
-    }
-  };
-  InvalidParameterError = class InvalidParameterError2 extends BaseError {
-    constructor({ param }) {
-      super("Invalid ABI parameter.", {
-        details: param
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "InvalidParameterError"
-      });
-    }
-  };
-  SolidityProtectedKeywordError = class SolidityProtectedKeywordError2 extends BaseError {
-    constructor({ param, name }) {
-      super("Invalid ABI parameter.", {
-        details: param,
-        metaMessages: [
-          `"${name}" is a protected Solidity keyword. More info: https://docs.soliditylang.org/en/latest/cheatsheet.html`
-        ]
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "SolidityProtectedKeywordError"
-      });
-    }
-  };
-  InvalidModifierError = class InvalidModifierError2 extends BaseError {
-    constructor({ param, type, modifier }) {
-      super("Invalid ABI parameter.", {
-        details: param,
-        metaMessages: [
-          `Modifier "${modifier}" not allowed${type ? ` in "${type}" type` : ""}.`
-        ]
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "InvalidModifierError"
-      });
-    }
-  };
-  InvalidFunctionModifierError = class InvalidFunctionModifierError2 extends BaseError {
-    constructor({ param, type, modifier }) {
-      super("Invalid ABI parameter.", {
-        details: param,
-        metaMessages: [
-          `Modifier "${modifier}" not allowed${type ? ` in "${type}" type` : ""}.`,
-          `Data location can only be specified for array, struct, or mapping types, but "${modifier}" was given.`
-        ]
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "InvalidFunctionModifierError"
-      });
-    }
-  };
-  InvalidAbiTypeParameterError = class InvalidAbiTypeParameterError2 extends BaseError {
-    constructor({ abiParameter }) {
-      super("Invalid ABI parameter.", {
-        details: JSON.stringify(abiParameter, null, 2),
-        metaMessages: ["ABI parameter type is invalid."]
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "InvalidAbiTypeParameterError"
-      });
-    }
-  };
-});
-var InvalidSignatureError;
-var InvalidStructSignatureError;
-var init_signature = __esm(() => {
-  init_errors();
-  InvalidSignatureError = class InvalidSignatureError2 extends BaseError {
-    constructor({ signature, type }) {
-      super(`Invalid ${type} signature.`, {
-        details: signature
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "InvalidSignatureError"
-      });
-    }
-  };
-  InvalidStructSignatureError = class InvalidStructSignatureError2 extends BaseError {
-    constructor({ signature }) {
-      super("Invalid struct signature.", {
-        details: signature,
-        metaMessages: ["No properties exist."]
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "InvalidStructSignatureError"
-      });
-    }
-  };
-});
-var CircularReferenceError;
-var init_struct = __esm(() => {
-  init_errors();
-  CircularReferenceError = class CircularReferenceError2 extends BaseError {
-    constructor({ type }) {
-      super("Circular reference detected.", {
-        metaMessages: [`Struct "${type}" is a circular reference.`]
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "CircularReferenceError"
-      });
-    }
-  };
-});
-var InvalidParenthesisError;
-var init_splitParameters = __esm(() => {
-  init_errors();
-  InvalidParenthesisError = class InvalidParenthesisError2 extends BaseError {
-    constructor({ current, depth }) {
-      super("Unbalanced parentheses.", {
-        metaMessages: [
-          `"${current.trim()}" has too many ${depth > 0 ? "opening" : "closing"} parentheses.`
-        ],
-        details: `Depth "${depth}"`
-      });
-      Object.defineProperty(this, "name", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: "InvalidParenthesisError"
-      });
-    }
-  };
-});
-function getParameterCacheKey(param, type, structs) {
-  let structKey = "";
-  if (structs)
-    for (const struct of Object.entries(structs)) {
-      if (!struct)
-        continue;
-      let propertyKey = "";
-      for (const property of struct[1]) {
-        propertyKey += `[${property.type}${property.name ? `:${property.name}` : ""}]`;
-      }
-      structKey += `(${struct[0]}{${propertyKey}})`;
-    }
-  if (type)
-    return `${type}:${param}${structKey}`;
-  return `${param}${structKey}`;
-}
-var parameterCache;
-var init_cache = __esm(() => {
-  parameterCache = new Map([
-    ["address", { type: "address" }],
-    ["bool", { type: "bool" }],
-    ["bytes", { type: "bytes" }],
-    ["bytes32", { type: "bytes32" }],
-    ["int", { type: "int256" }],
-    ["int256", { type: "int256" }],
-    ["string", { type: "string" }],
-    ["uint", { type: "uint256" }],
-    ["uint8", { type: "uint8" }],
-    ["uint16", { type: "uint16" }],
-    ["uint24", { type: "uint24" }],
-    ["uint32", { type: "uint32" }],
-    ["uint64", { type: "uint64" }],
-    ["uint96", { type: "uint96" }],
-    ["uint112", { type: "uint112" }],
-    ["uint160", { type: "uint160" }],
-    ["uint192", { type: "uint192" }],
-    ["uint256", { type: "uint256" }],
-    ["address owner", { type: "address", name: "owner" }],
-    ["address to", { type: "address", name: "to" }],
-    ["bool approved", { type: "bool", name: "approved" }],
-    ["bytes _data", { type: "bytes", name: "_data" }],
-    ["bytes data", { type: "bytes", name: "data" }],
-    ["bytes signature", { type: "bytes", name: "signature" }],
-    ["bytes32 hash", { type: "bytes32", name: "hash" }],
-    ["bytes32 r", { type: "bytes32", name: "r" }],
-    ["bytes32 root", { type: "bytes32", name: "root" }],
-    ["bytes32 s", { type: "bytes32", name: "s" }],
-    ["string name", { type: "string", name: "name" }],
-    ["string symbol", { type: "string", name: "symbol" }],
-    ["string tokenURI", { type: "string", name: "tokenURI" }],
-    ["uint tokenId", { type: "uint256", name: "tokenId" }],
-    ["uint8 v", { type: "uint8", name: "v" }],
-    ["uint256 balance", { type: "uint256", name: "balance" }],
-    ["uint256 tokenId", { type: "uint256", name: "tokenId" }],
-    ["uint256 value", { type: "uint256", name: "value" }],
-    [
-      "event:address indexed from",
-      { type: "address", name: "from", indexed: true }
-    ],
-    ["event:address indexed to", { type: "address", name: "to", indexed: true }],
-    [
-      "event:uint indexed tokenId",
-      { type: "uint256", name: "tokenId", indexed: true }
-    ],
-    [
-      "event:uint256 indexed tokenId",
-      { type: "uint256", name: "tokenId", indexed: true }
-    ]
-  ]);
-});
-function parseAbiParameter(param, options) {
-  const parameterCacheKey = getParameterCacheKey(param, options?.type, options?.structs);
-  if (parameterCache.has(parameterCacheKey))
-    return parameterCache.get(parameterCacheKey);
-  const isTuple = isTupleRegex.test(param);
-  const match = execTyped(isTuple ? abiParameterWithTupleRegex : abiParameterWithoutTupleRegex, param);
-  if (!match)
-    throw new InvalidParameterError({ param });
-  if (match.name && isSolidityKeyword(match.name))
-    throw new SolidityProtectedKeywordError({ param, name: match.name });
-  const name = match.name ? { name: match.name } : {};
-  const indexed = match.modifier === "indexed" ? { indexed: true } : {};
-  const structs = options?.structs ?? {};
-  let type;
-  let components = {};
-  if (isTuple) {
-    type = "tuple";
-    const params = splitParameters(match.type);
-    const components_ = [];
-    const length = params.length;
-    for (let i2 = 0;i2 < length; i2++) {
-      components_.push(parseAbiParameter(params[i2], { structs }));
-    }
-    components = { components: components_ };
-  } else if (match.type in structs) {
-    type = "tuple";
-    components = { components: structs[match.type] };
-  } else if (dynamicIntegerRegex.test(match.type)) {
-    type = `${match.type}256`;
-  } else if (match.type === "address payable") {
-    type = "address";
-  } else {
-    type = match.type;
-    if (!(options?.type === "struct") && !isSolidityType(type))
-      throw new UnknownSolidityTypeError({ type });
-  }
-  if (match.modifier) {
-    if (!options?.modifiers?.has?.(match.modifier))
-      throw new InvalidModifierError({
-        param,
-        type: options?.type,
-        modifier: match.modifier
-      });
-    if (functionModifiers.has(match.modifier) && !isValidDataLocation(type, !!match.array))
-      throw new InvalidFunctionModifierError({
-        param,
-        type: options?.type,
-        modifier: match.modifier
-      });
-  }
-  const abiParameter = {
-    type: `${type}${match.array ?? ""}`,
-    ...name,
-    ...indexed,
-    ...components
-  };
-  parameterCache.set(parameterCacheKey, abiParameter);
-  return abiParameter;
-}
-function splitParameters(params, result = [], current = "", depth = 0) {
-  const length = params.trim().length;
-  for (let i2 = 0;i2 < length; i2++) {
-    const char = params[i2];
-    const tail = params.slice(i2 + 1);
-    switch (char) {
-      case ",":
-        return depth === 0 ? splitParameters(tail, [...result, current.trim()]) : splitParameters(tail, result, `${current}${char}`, depth);
-      case "(":
-        return splitParameters(tail, result, `${current}${char}`, depth + 1);
-      case ")":
-        return splitParameters(tail, result, `${current}${char}`, depth - 1);
-      default:
-        return splitParameters(tail, result, `${current}${char}`, depth);
-    }
-  }
-  if (current === "")
-    return result;
-  if (depth !== 0)
-    throw new InvalidParenthesisError({ current, depth });
-  result.push(current.trim());
-  return result;
-}
-function isSolidityType(type) {
-  return type === "address" || type === "bool" || type === "function" || type === "string" || bytesRegex.test(type) || integerRegex.test(type);
-}
-function isSolidityKeyword(name) {
-  return name === "address" || name === "bool" || name === "function" || name === "string" || name === "tuple" || bytesRegex.test(name) || integerRegex.test(name) || protectedKeywordsRegex.test(name);
-}
-function isValidDataLocation(type, isArray) {
-  return isArray || type === "bytes" || type === "string" || type === "tuple";
-}
-var abiParameterWithoutTupleRegex;
-var abiParameterWithTupleRegex;
-var dynamicIntegerRegex;
-var protectedKeywordsRegex;
-var init_utils = __esm(() => {
-  init_regex();
-  init_abiItem();
-  init_abiParameter();
-  init_splitParameters();
-  init_cache();
-  init_signatures();
-  abiParameterWithoutTupleRegex = /^(?<type>[a-zA-Z$_][a-zA-Z0-9$_]*(?:\spayable)?)(?<array>(?:\[\d*?\])+?)?(?:\s(?<modifier>calldata|indexed|memory|storage{1}))?(?:\s(?<name>[a-zA-Z$_][a-zA-Z0-9$_]*))?$/;
-  abiParameterWithTupleRegex = /^\((?<type>.+?)\)(?<array>(?:\[\d*?\])+?)?(?:\s(?<modifier>calldata|indexed|memory|storage{1}))?(?:\s(?<name>[a-zA-Z$_][a-zA-Z0-9$_]*))?$/;
-  dynamicIntegerRegex = /^u?int$/;
-  protectedKeywordsRegex = /^(?:after|alias|anonymous|apply|auto|byte|calldata|case|catch|constant|copyof|default|defined|error|event|external|false|final|function|immutable|implements|in|indexed|inline|internal|let|mapping|match|memory|mutable|null|of|override|partial|private|promise|public|pure|reference|relocatable|return|returns|sizeof|static|storage|struct|super|supports|switch|this|true|try|typedef|typeof|var|view|virtual)$/;
-});
-function parseStructs(signatures) {
-  const shallowStructs = {};
-  const signaturesLength = signatures.length;
-  for (let i2 = 0;i2 < signaturesLength; i2++) {
-    const signature = signatures[i2];
-    if (!isStructSignature(signature))
-      continue;
-    const match = execStructSignature(signature);
-    if (!match)
-      throw new InvalidSignatureError({ signature, type: "struct" });
-    const properties = match.properties.split(";");
-    const components = [];
-    const propertiesLength = properties.length;
-    for (let k = 0;k < propertiesLength; k++) {
-      const property = properties[k];
-      const trimmed = property.trim();
-      if (!trimmed)
-        continue;
-      const abiParameter = parseAbiParameter(trimmed, {
-        type: "struct"
-      });
-      components.push(abiParameter);
-    }
-    if (!components.length)
-      throw new InvalidStructSignatureError({ signature });
-    shallowStructs[match.name] = components;
-  }
-  const resolvedStructs = {};
-  const entries = Object.entries(shallowStructs);
-  const entriesLength = entries.length;
-  for (let i2 = 0;i2 < entriesLength; i2++) {
-    const [name, parameters] = entries[i2];
-    resolvedStructs[name] = resolveStructs(parameters, shallowStructs);
-  }
-  return resolvedStructs;
-}
-function resolveStructs(abiParameters = [], structs = {}, ancestors = new Set) {
-  const components = [];
-  const length = abiParameters.length;
-  for (let i2 = 0;i2 < length; i2++) {
-    const abiParameter = abiParameters[i2];
-    const isTuple = isTupleRegex.test(abiParameter.type);
-    if (isTuple)
-      components.push(abiParameter);
-    else {
-      const match = execTyped(typeWithoutTupleRegex, abiParameter.type);
-      if (!match?.type)
-        throw new InvalidAbiTypeParameterError({ abiParameter });
-      const { array, type } = match;
-      if (type in structs) {
-        if (ancestors.has(type))
-          throw new CircularReferenceError({ type });
-        components.push({
-          ...abiParameter,
-          type: `tuple${array ?? ""}`,
-          components: resolveStructs(structs[type], structs, new Set([...ancestors, type]))
-        });
-      } else {
-        if (isSolidityType(type))
-          components.push(abiParameter);
-        else
-          throw new UnknownTypeError({ type });
-      }
-    }
-  }
-  return components;
-}
-var typeWithoutTupleRegex;
-var init_structs = __esm(() => {
-  init_regex();
-  init_abiItem();
-  init_abiParameter();
-  init_signature();
-  init_struct();
-  init_signatures();
-  init_utils();
-  typeWithoutTupleRegex = /^(?<type>[a-zA-Z$_][a-zA-Z0-9$_]*)(?<array>(?:\[\d*?\])+?)?$/;
-});
-function parseAbiParameters(params) {
-  const abiParameters = [];
-  if (typeof params === "string") {
-    const parameters = splitParameters(params);
-    const length = parameters.length;
-    for (let i2 = 0;i2 < length; i2++) {
-      abiParameters.push(parseAbiParameter(parameters[i2], { modifiers }));
-    }
-  } else {
-    const structs = parseStructs(params);
-    const length = params.length;
-    for (let i2 = 0;i2 < length; i2++) {
-      const signature = params[i2];
-      if (isStructSignature(signature))
-        continue;
-      const parameters = splitParameters(signature);
-      const length2 = parameters.length;
-      for (let k = 0;k < length2; k++) {
-        abiParameters.push(parseAbiParameter(parameters[k], { modifiers, structs }));
-      }
-    }
-  }
-  if (abiParameters.length === 0)
-    throw new InvalidAbiParametersError({ params });
-  return abiParameters;
-}
-var init_parseAbiParameters = __esm(() => {
-  init_abiParameter();
-  init_signatures();
-  init_structs();
-  init_utils();
-  init_utils();
-});
-var init_exports = __esm(() => {
-  init_parseAbiParameters();
-});
-function formatAbiParams(params, { includeName = false } = {}) {
-  if (!params)
-    return "";
-  return params.map((param) => formatAbiParam(param, { includeName })).join(includeName ? ", " : ",");
-}
-function formatAbiParam(param, { includeName }) {
-  if (param.type.startsWith("tuple")) {
-    return `(${formatAbiParams(param.components, { includeName })})${param.type.slice("tuple".length)}`;
-  }
-  return param.type + (includeName && param.name ? ` ${param.name}` : "");
-}
-var init_formatAbiItem = () => {};
 function isHex(value2, { strict = true } = {}) {
   if (!value2)
     return false;
@@ -621,7 +23,7 @@ function size(value2) {
   return value2.length;
 }
 var init_size = () => {};
-var version2 = "2.47.0";
+var version = "2.47.0";
 function walk(err, fn) {
   if (fn?.(err))
     return err;
@@ -630,23 +32,23 @@ function walk(err, fn) {
   return fn ? null : err;
 }
 var errorConfig;
-var BaseError2;
+var BaseError;
 var init_base = __esm(() => {
   errorConfig = {
     getDocsUrl: ({ docsBaseUrl, docsPath = "", docsSlug }) => docsPath ? `${docsBaseUrl ?? "https://viem.sh"}${docsPath}${docsSlug ? `#${docsSlug}` : ""}` : undefined,
-    version: `viem@${version2}`
+    version: `viem@${version}`
   };
-  BaseError2 = class BaseError22 extends Error {
+  BaseError = class BaseError2 extends Error {
     constructor(shortMessage, args = {}) {
       const details = (() => {
-        if (args.cause instanceof BaseError22)
+        if (args.cause instanceof BaseError2)
           return args.cause.details;
         if (args.cause?.message)
           return args.cause.message;
         return args.details;
       })();
       const docsPath = (() => {
-        if (args.cause instanceof BaseError22)
+        if (args.cause instanceof BaseError2)
           return args.cause.docsPath || args.docsPath;
         return args.docsPath;
       })();
@@ -702,79 +104,17 @@ var init_base = __esm(() => {
       this.metaMessages = args.metaMessages;
       this.name = args.name ?? this.name;
       this.shortMessage = shortMessage;
-      this.version = version2;
+      this.version = version;
     }
     walk(fn) {
       return walk(this, fn);
     }
   };
 });
-var AbiDecodingDataSizeTooSmallError;
-var AbiDecodingZeroDataError;
-var InvalidAbiDecodingTypeError;
-var init_abi = __esm(() => {
-  init_formatAbiItem();
-  init_base();
-  AbiDecodingDataSizeTooSmallError = class AbiDecodingDataSizeTooSmallError2 extends BaseError2 {
-    constructor({ data, params, size: size2 }) {
-      super([`Data size of ${size2} bytes is too small for given parameters.`].join(`
-`), {
-        metaMessages: [
-          `Params: (${formatAbiParams(params, { includeName: true })})`,
-          `Data:   ${data} (${size2} bytes)`
-        ],
-        name: "AbiDecodingDataSizeTooSmallError"
-      });
-      Object.defineProperty(this, "data", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: undefined
-      });
-      Object.defineProperty(this, "params", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: undefined
-      });
-      Object.defineProperty(this, "size", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: undefined
-      });
-      this.data = data;
-      this.params = params;
-      this.size = size2;
-    }
-  };
-  AbiDecodingZeroDataError = class AbiDecodingZeroDataError2 extends BaseError2 {
-    constructor() {
-      super('Cannot decode zero data ("0x") with ABI parameters.', {
-        name: "AbiDecodingZeroDataError"
-      });
-    }
-  };
-  InvalidAbiDecodingTypeError = class InvalidAbiDecodingTypeError2 extends BaseError2 {
-    constructor(type, { docsPath }) {
-      super([
-        `Type "${type}" is not a valid decoding type.`,
-        "Please provide a valid ABI type."
-      ].join(`
-`), { docsPath, name: "InvalidAbiDecodingType" });
-    }
-  };
-});
-var SliceOffsetOutOfBoundsError;
 var SizeExceedsPaddingSizeError;
 var init_data = __esm(() => {
   init_base();
-  SliceOffsetOutOfBoundsError = class SliceOffsetOutOfBoundsError2 extends BaseError2 {
-    constructor({ offset, position, size: size2 }) {
-      super(`Slice ${position === "start" ? "starting" : "ending"} at offset "${offset}" is out-of-bounds (size: ${size2}).`, { name: "SliceOffsetOutOfBoundsError" });
-    }
-  };
-  SizeExceedsPaddingSizeError = class SizeExceedsPaddingSizeError2 extends BaseError2 {
+  SizeExceedsPaddingSizeError = class SizeExceedsPaddingSizeError2 extends BaseError {
     constructor({ size: size2, targetSize, type }) {
       super(`${type.charAt(0).toUpperCase()}${type.slice(1).toLowerCase()} size (${size2}) exceeds padding size (${targetSize}).`, { name: "SizeExceedsPaddingSizeError" });
     }
@@ -817,77 +157,26 @@ var init_pad = __esm(() => {
   init_data();
 });
 var IntegerOutOfRangeError;
-var InvalidBytesBooleanError;
 var SizeOverflowError;
 var init_encoding = __esm(() => {
   init_base();
-  IntegerOutOfRangeError = class IntegerOutOfRangeError2 extends BaseError2 {
+  IntegerOutOfRangeError = class IntegerOutOfRangeError2 extends BaseError {
     constructor({ max, min, signed, size: size2, value: value2 }) {
       super(`Number "${value2}" is not in safe ${size2 ? `${size2 * 8}-bit ${signed ? "signed" : "unsigned"} ` : ""}integer range ${max ? `(${min} to ${max})` : `(above ${min})`}`, { name: "IntegerOutOfRangeError" });
     }
   };
-  InvalidBytesBooleanError = class InvalidBytesBooleanError2 extends BaseError2 {
-    constructor(bytes) {
-      super(`Bytes value "${bytes}" is not a valid boolean. The bytes array must contain a single byte of either a 0 or 1 value.`, {
-        name: "InvalidBytesBooleanError"
-      });
-    }
-  };
-  SizeOverflowError = class SizeOverflowError2 extends BaseError2 {
+  SizeOverflowError = class SizeOverflowError2 extends BaseError {
     constructor({ givenSize, maxSize }) {
       super(`Size cannot exceed ${maxSize} bytes. Given size: ${givenSize} bytes.`, { name: "SizeOverflowError" });
     }
   };
 });
-function trim(hexOrBytes, { dir = "left" } = {}) {
-  let data = typeof hexOrBytes === "string" ? hexOrBytes.replace("0x", "") : hexOrBytes;
-  let sliceLength = 0;
-  for (let i2 = 0;i2 < data.length - 1; i2++) {
-    if (data[dir === "left" ? i2 : data.length - i2 - 1].toString() === "0")
-      sliceLength++;
-    else
-      break;
-  }
-  data = dir === "left" ? data.slice(sliceLength) : data.slice(0, data.length - sliceLength);
-  if (typeof hexOrBytes === "string") {
-    if (data.length === 1 && dir === "right")
-      data = `${data}0`;
-    return `0x${data.length % 2 === 1 ? `0${data}` : data}`;
-  }
-  return data;
-}
 function assertSize2(hexOrBytes, { size: size2 }) {
   if (size(hexOrBytes) > size2)
     throw new SizeOverflowError({
       givenSize: size(hexOrBytes),
       maxSize: size2
     });
-}
-function hexToBigInt(hex, opts = {}) {
-  const { signed } = opts;
-  if (opts.size)
-    assertSize2(hex, { size: opts.size });
-  const value2 = BigInt(hex);
-  if (!signed)
-    return value2;
-  const size2 = (hex.length - 2) / 2;
-  const max = (1n << BigInt(size2) * 8n - 1n) - 1n;
-  if (value2 <= max)
-    return value2;
-  return value2 - BigInt(`0x${"f".padStart(size2 * 2, "f")}`) - 1n;
-}
-function hexToNumber(hex, opts = {}) {
-  const value2 = hexToBigInt(hex, opts);
-  const number = Number(value2);
-  if (!Number.isSafeInteger(number))
-    throw new IntegerOutOfRangeError({
-      max: `${Number.MAX_SAFE_INTEGER}`,
-      min: `${Number.MIN_SAFE_INTEGER}`,
-      signed: opts.signed,
-      size: opts.size,
-      value: `${value2}n`
-    });
-  return number;
 }
 var init_fromHex = __esm(() => {
   init_encoding();
@@ -1006,7 +295,7 @@ function hexToBytes2(hex_, opts = {}) {
     const nibbleLeft = charCodeToBase16(hexString.charCodeAt(j++));
     const nibbleRight = charCodeToBase16(hexString.charCodeAt(j++));
     if (nibbleLeft === undefined || nibbleRight === undefined) {
-      throw new BaseError2(`Invalid byte sequence ("${hexString[j - 2]}${hexString[j - 1]}" in "${hexString}").`);
+      throw new BaseError(`Invalid byte sequence ("${hexString[j - 2]}${hexString[j - 1]}" in "${hexString}").`);
     }
     bytes[index] = nibbleLeft * 16 + nibbleRight;
   }
@@ -1133,7 +422,7 @@ function createHasher(hashCons) {
 }
 var isLE;
 var swap32IfBE;
-var init_utils2 = __esm(() => {
+var init_utils = __esm(() => {
   /*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
   isLE = /* @__PURE__ */ (() => new Uint8Array(new Uint32Array([287454020]).buffer)[0] === 68)();
   swap32IfBE = isLE ? (u) => u : byteSwap32;
@@ -1197,7 +486,7 @@ var gen = (suffix, blockLen, outputLen) => createHasher(() => new Keccak(blockLe
 var keccak_256;
 var init_sha3 = __esm(() => {
   init__u64();
-  init_utils2();
+  init_utils();
   _0n = BigInt(0);
   _1n = BigInt(1);
   _2n = BigInt(2);
@@ -1345,521 +634,6 @@ var init_keccak256 = __esm(() => {
   init_sha3();
   init_toBytes();
   init_toHex();
-});
-var LruMap;
-var init_lru = __esm(() => {
-  LruMap = class LruMap2 extends Map {
-    constructor(size2) {
-      super();
-      Object.defineProperty(this, "maxSize", {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: undefined
-      });
-      this.maxSize = size2;
-    }
-    get(key) {
-      const value2 = super.get(key);
-      if (super.has(key) && value2 !== undefined) {
-        this.delete(key);
-        super.set(key, value2);
-      }
-      return value2;
-    }
-    set(key, value2) {
-      super.set(key, value2);
-      if (this.maxSize && this.size > this.maxSize) {
-        const firstKey = this.keys().next().value;
-        if (firstKey)
-          this.delete(firstKey);
-      }
-      return this;
-    }
-  };
-});
-function checksumAddress(address_, chainId) {
-  if (checksumAddressCache.has(`${address_}.${chainId}`))
-    return checksumAddressCache.get(`${address_}.${chainId}`);
-  const hexAddress = chainId ? `${chainId}${address_.toLowerCase()}` : address_.substring(2).toLowerCase();
-  const hash = keccak256(stringToBytes(hexAddress), "bytes");
-  const address = (chainId ? hexAddress.substring(`${chainId}0x`.length) : hexAddress).split("");
-  for (let i2 = 0;i2 < 40; i2 += 2) {
-    if (hash[i2 >> 1] >> 4 >= 8 && address[i2]) {
-      address[i2] = address[i2].toUpperCase();
-    }
-    if ((hash[i2 >> 1] & 15) >= 8 && address[i2 + 1]) {
-      address[i2 + 1] = address[i2 + 1].toUpperCase();
-    }
-  }
-  const result = `0x${address.join("")}`;
-  checksumAddressCache.set(`${address_}.${chainId}`, result);
-  return result;
-}
-var checksumAddressCache;
-var init_getAddress = __esm(() => {
-  init_toBytes();
-  init_keccak256();
-  init_lru();
-  checksumAddressCache = /* @__PURE__ */ new LruMap(8192);
-});
-function assertStartOffset(value2, start) {
-  if (typeof start === "number" && start > 0 && start > size(value2) - 1)
-    throw new SliceOffsetOutOfBoundsError({
-      offset: start,
-      position: "start",
-      size: size(value2)
-    });
-}
-function assertEndOffset(value2, start, end) {
-  if (typeof start === "number" && typeof end === "number" && size(value2) !== end - start) {
-    throw new SliceOffsetOutOfBoundsError({
-      offset: end,
-      position: "end",
-      size: size(value2)
-    });
-  }
-}
-function sliceBytes(value_, start, end, { strict } = {}) {
-  assertStartOffset(value_, start);
-  const value2 = value_.slice(start, end);
-  if (strict)
-    assertEndOffset(value2, start, end);
-  return value2;
-}
-var init_slice = __esm(() => {
-  init_data();
-  init_size();
-});
-function getArrayComponents(type) {
-  const matches = type.match(/^(.*)\[(\d+)?\]$/);
-  return matches ? [matches[2] ? Number(matches[2]) : null, matches[1]] : undefined;
-}
-var init_encodeAbiParameters = () => {};
-var NegativeOffsetError;
-var PositionOutOfBoundsError;
-var RecursiveReadLimitExceededError;
-var init_cursor = __esm(() => {
-  init_base();
-  NegativeOffsetError = class NegativeOffsetError2 extends BaseError2 {
-    constructor({ offset }) {
-      super(`Offset \`${offset}\` cannot be negative.`, {
-        name: "NegativeOffsetError"
-      });
-    }
-  };
-  PositionOutOfBoundsError = class PositionOutOfBoundsError2 extends BaseError2 {
-    constructor({ length, position }) {
-      super(`Position \`${position}\` is out of bounds (\`0 < position < ${length}\`).`, { name: "PositionOutOfBoundsError" });
-    }
-  };
-  RecursiveReadLimitExceededError = class RecursiveReadLimitExceededError2 extends BaseError2 {
-    constructor({ count, limit }) {
-      super(`Recursive read limit of \`${limit}\` exceeded (recursive read count: \`${count}\`).`, { name: "RecursiveReadLimitExceededError" });
-    }
-  };
-});
-function createCursor(bytes, { recursiveReadLimit = 8192 } = {}) {
-  const cursor = Object.create(staticCursor);
-  cursor.bytes = bytes;
-  cursor.dataView = new DataView(bytes.buffer ?? bytes, bytes.byteOffset, bytes.byteLength);
-  cursor.positionReadCount = new Map;
-  cursor.recursiveReadLimit = recursiveReadLimit;
-  return cursor;
-}
-var staticCursor;
-var init_cursor2 = __esm(() => {
-  init_cursor();
-  staticCursor = {
-    bytes: new Uint8Array,
-    dataView: new DataView(new ArrayBuffer(0)),
-    position: 0,
-    positionReadCount: new Map,
-    recursiveReadCount: 0,
-    recursiveReadLimit: Number.POSITIVE_INFINITY,
-    assertReadLimit() {
-      if (this.recursiveReadCount >= this.recursiveReadLimit)
-        throw new RecursiveReadLimitExceededError({
-          count: this.recursiveReadCount + 1,
-          limit: this.recursiveReadLimit
-        });
-    },
-    assertPosition(position) {
-      if (position < 0 || position > this.bytes.length - 1)
-        throw new PositionOutOfBoundsError({
-          length: this.bytes.length,
-          position
-        });
-    },
-    decrementPosition(offset) {
-      if (offset < 0)
-        throw new NegativeOffsetError({ offset });
-      const position = this.position - offset;
-      this.assertPosition(position);
-      this.position = position;
-    },
-    getReadCount(position) {
-      return this.positionReadCount.get(position || this.position) || 0;
-    },
-    incrementPosition(offset) {
-      if (offset < 0)
-        throw new NegativeOffsetError({ offset });
-      const position = this.position + offset;
-      this.assertPosition(position);
-      this.position = position;
-    },
-    inspectByte(position_) {
-      const position = position_ ?? this.position;
-      this.assertPosition(position);
-      return this.bytes[position];
-    },
-    inspectBytes(length, position_) {
-      const position = position_ ?? this.position;
-      this.assertPosition(position + length - 1);
-      return this.bytes.subarray(position, position + length);
-    },
-    inspectUint8(position_) {
-      const position = position_ ?? this.position;
-      this.assertPosition(position);
-      return this.bytes[position];
-    },
-    inspectUint16(position_) {
-      const position = position_ ?? this.position;
-      this.assertPosition(position + 1);
-      return this.dataView.getUint16(position);
-    },
-    inspectUint24(position_) {
-      const position = position_ ?? this.position;
-      this.assertPosition(position + 2);
-      return (this.dataView.getUint16(position) << 8) + this.dataView.getUint8(position + 2);
-    },
-    inspectUint32(position_) {
-      const position = position_ ?? this.position;
-      this.assertPosition(position + 3);
-      return this.dataView.getUint32(position);
-    },
-    pushByte(byte) {
-      this.assertPosition(this.position);
-      this.bytes[this.position] = byte;
-      this.position++;
-    },
-    pushBytes(bytes) {
-      this.assertPosition(this.position + bytes.length - 1);
-      this.bytes.set(bytes, this.position);
-      this.position += bytes.length;
-    },
-    pushUint8(value2) {
-      this.assertPosition(this.position);
-      this.bytes[this.position] = value2;
-      this.position++;
-    },
-    pushUint16(value2) {
-      this.assertPosition(this.position + 1);
-      this.dataView.setUint16(this.position, value2);
-      this.position += 2;
-    },
-    pushUint24(value2) {
-      this.assertPosition(this.position + 2);
-      this.dataView.setUint16(this.position, value2 >> 8);
-      this.dataView.setUint8(this.position + 2, value2 & ~4294967040);
-      this.position += 3;
-    },
-    pushUint32(value2) {
-      this.assertPosition(this.position + 3);
-      this.dataView.setUint32(this.position, value2);
-      this.position += 4;
-    },
-    readByte() {
-      this.assertReadLimit();
-      this._touch();
-      const value2 = this.inspectByte();
-      this.position++;
-      return value2;
-    },
-    readBytes(length, size2) {
-      this.assertReadLimit();
-      this._touch();
-      const value2 = this.inspectBytes(length);
-      this.position += size2 ?? length;
-      return value2;
-    },
-    readUint8() {
-      this.assertReadLimit();
-      this._touch();
-      const value2 = this.inspectUint8();
-      this.position += 1;
-      return value2;
-    },
-    readUint16() {
-      this.assertReadLimit();
-      this._touch();
-      const value2 = this.inspectUint16();
-      this.position += 2;
-      return value2;
-    },
-    readUint24() {
-      this.assertReadLimit();
-      this._touch();
-      const value2 = this.inspectUint24();
-      this.position += 3;
-      return value2;
-    },
-    readUint32() {
-      this.assertReadLimit();
-      this._touch();
-      const value2 = this.inspectUint32();
-      this.position += 4;
-      return value2;
-    },
-    get remaining() {
-      return this.bytes.length - this.position;
-    },
-    setPosition(position) {
-      const oldPosition = this.position;
-      this.assertPosition(position);
-      this.position = position;
-      return () => this.position = oldPosition;
-    },
-    _touch() {
-      if (this.recursiveReadLimit === Number.POSITIVE_INFINITY)
-        return;
-      const count = this.getReadCount();
-      this.positionReadCount.set(this.position, count + 1);
-      if (count > 0)
-        this.recursiveReadCount++;
-    }
-  };
-});
-function bytesToBigInt(bytes, opts = {}) {
-  if (typeof opts.size !== "undefined")
-    assertSize2(bytes, { size: opts.size });
-  const hex = bytesToHex(bytes, opts);
-  return hexToBigInt(hex, opts);
-}
-function bytesToBool(bytes_, opts = {}) {
-  let bytes = bytes_;
-  if (typeof opts.size !== "undefined") {
-    assertSize2(bytes, { size: opts.size });
-    bytes = trim(bytes);
-  }
-  if (bytes.length > 1 || bytes[0] > 1)
-    throw new InvalidBytesBooleanError(bytes);
-  return Boolean(bytes[0]);
-}
-function bytesToNumber(bytes, opts = {}) {
-  if (typeof opts.size !== "undefined")
-    assertSize2(bytes, { size: opts.size });
-  const hex = bytesToHex(bytes, opts);
-  return hexToNumber(hex, opts);
-}
-function bytesToString(bytes_, opts = {}) {
-  let bytes = bytes_;
-  if (typeof opts.size !== "undefined") {
-    assertSize2(bytes, { size: opts.size });
-    bytes = trim(bytes, { dir: "right" });
-  }
-  return new TextDecoder().decode(bytes);
-}
-var init_fromBytes = __esm(() => {
-  init_encoding();
-  init_fromHex();
-  init_toHex();
-});
-function decodeAbiParameters(params, data) {
-  const bytes = typeof data === "string" ? hexToBytes2(data) : data;
-  const cursor = createCursor(bytes);
-  if (size(bytes) === 0 && params.length > 0)
-    throw new AbiDecodingZeroDataError;
-  if (size(data) && size(data) < 32)
-    throw new AbiDecodingDataSizeTooSmallError({
-      data: typeof data === "string" ? data : bytesToHex(data),
-      params,
-      size: size(data)
-    });
-  let consumed = 0;
-  const values = [];
-  for (let i2 = 0;i2 < params.length; ++i2) {
-    const param = params[i2];
-    cursor.setPosition(consumed);
-    const [data2, consumed_] = decodeParameter(cursor, param, {
-      staticPosition: 0
-    });
-    consumed += consumed_;
-    values.push(data2);
-  }
-  return values;
-}
-function decodeParameter(cursor, param, { staticPosition }) {
-  const arrayComponents = getArrayComponents(param.type);
-  if (arrayComponents) {
-    const [length, type] = arrayComponents;
-    return decodeArray(cursor, { ...param, type }, { length, staticPosition });
-  }
-  if (param.type === "tuple")
-    return decodeTuple(cursor, param, { staticPosition });
-  if (param.type === "address")
-    return decodeAddress(cursor);
-  if (param.type === "bool")
-    return decodeBool(cursor);
-  if (param.type.startsWith("bytes"))
-    return decodeBytes(cursor, param, { staticPosition });
-  if (param.type.startsWith("uint") || param.type.startsWith("int"))
-    return decodeNumber(cursor, param);
-  if (param.type === "string")
-    return decodeString(cursor, { staticPosition });
-  throw new InvalidAbiDecodingTypeError(param.type, {
-    docsPath: "/docs/contract/decodeAbiParameters"
-  });
-}
-function decodeAddress(cursor) {
-  const value2 = cursor.readBytes(32);
-  return [checksumAddress(bytesToHex(sliceBytes(value2, -20))), 32];
-}
-function decodeArray(cursor, param, { length, staticPosition }) {
-  if (!length) {
-    const offset = bytesToNumber(cursor.readBytes(sizeOfOffset));
-    const start = staticPosition + offset;
-    const startOfData = start + sizeOfLength;
-    cursor.setPosition(start);
-    const length2 = bytesToNumber(cursor.readBytes(sizeOfLength));
-    const dynamicChild = hasDynamicChild(param);
-    let consumed2 = 0;
-    const value3 = [];
-    for (let i2 = 0;i2 < length2; ++i2) {
-      cursor.setPosition(startOfData + (dynamicChild ? i2 * 32 : consumed2));
-      const [data, consumed_] = decodeParameter(cursor, param, {
-        staticPosition: startOfData
-      });
-      consumed2 += consumed_;
-      value3.push(data);
-    }
-    cursor.setPosition(staticPosition + 32);
-    return [value3, 32];
-  }
-  if (hasDynamicChild(param)) {
-    const offset = bytesToNumber(cursor.readBytes(sizeOfOffset));
-    const start = staticPosition + offset;
-    const value3 = [];
-    for (let i2 = 0;i2 < length; ++i2) {
-      cursor.setPosition(start + i2 * 32);
-      const [data] = decodeParameter(cursor, param, {
-        staticPosition: start
-      });
-      value3.push(data);
-    }
-    cursor.setPosition(staticPosition + 32);
-    return [value3, 32];
-  }
-  let consumed = 0;
-  const value2 = [];
-  for (let i2 = 0;i2 < length; ++i2) {
-    const [data, consumed_] = decodeParameter(cursor, param, {
-      staticPosition: staticPosition + consumed
-    });
-    consumed += consumed_;
-    value2.push(data);
-  }
-  return [value2, consumed];
-}
-function decodeBool(cursor) {
-  return [bytesToBool(cursor.readBytes(32), { size: 32 }), 32];
-}
-function decodeBytes(cursor, param, { staticPosition }) {
-  const [_, size2] = param.type.split("bytes");
-  if (!size2) {
-    const offset = bytesToNumber(cursor.readBytes(32));
-    cursor.setPosition(staticPosition + offset);
-    const length = bytesToNumber(cursor.readBytes(32));
-    if (length === 0) {
-      cursor.setPosition(staticPosition + 32);
-      return ["0x", 32];
-    }
-    const data = cursor.readBytes(length);
-    cursor.setPosition(staticPosition + 32);
-    return [bytesToHex(data), 32];
-  }
-  const value2 = bytesToHex(cursor.readBytes(Number.parseInt(size2, 10), 32));
-  return [value2, 32];
-}
-function decodeNumber(cursor, param) {
-  const signed = param.type.startsWith("int");
-  const size2 = Number.parseInt(param.type.split("int")[1] || "256", 10);
-  const value2 = cursor.readBytes(32);
-  return [
-    size2 > 48 ? bytesToBigInt(value2, { signed }) : bytesToNumber(value2, { signed }),
-    32
-  ];
-}
-function decodeTuple(cursor, param, { staticPosition }) {
-  const hasUnnamedChild = param.components.length === 0 || param.components.some(({ name }) => !name);
-  const value2 = hasUnnamedChild ? [] : {};
-  let consumed = 0;
-  if (hasDynamicChild(param)) {
-    const offset = bytesToNumber(cursor.readBytes(sizeOfOffset));
-    const start = staticPosition + offset;
-    for (let i2 = 0;i2 < param.components.length; ++i2) {
-      const component = param.components[i2];
-      cursor.setPosition(start + consumed);
-      const [data, consumed_] = decodeParameter(cursor, component, {
-        staticPosition: start
-      });
-      consumed += consumed_;
-      value2[hasUnnamedChild ? i2 : component?.name] = data;
-    }
-    cursor.setPosition(staticPosition + 32);
-    return [value2, 32];
-  }
-  for (let i2 = 0;i2 < param.components.length; ++i2) {
-    const component = param.components[i2];
-    const [data, consumed_] = decodeParameter(cursor, component, {
-      staticPosition
-    });
-    value2[hasUnnamedChild ? i2 : component?.name] = data;
-    consumed += consumed_;
-  }
-  return [value2, consumed];
-}
-function decodeString(cursor, { staticPosition }) {
-  const offset = bytesToNumber(cursor.readBytes(32));
-  const start = staticPosition + offset;
-  cursor.setPosition(start);
-  const length = bytesToNumber(cursor.readBytes(32));
-  if (length === 0) {
-    cursor.setPosition(staticPosition + 32);
-    return ["", 32];
-  }
-  const data = cursor.readBytes(length, 32);
-  const value2 = bytesToString(trim(data));
-  cursor.setPosition(staticPosition + 32);
-  return [value2, 32];
-}
-function hasDynamicChild(param) {
-  const { type } = param;
-  if (type === "string")
-    return true;
-  if (type === "bytes")
-    return true;
-  if (type.endsWith("[]"))
-    return true;
-  if (type === "tuple")
-    return param.components?.some(hasDynamicChild);
-  const arrayComponents = getArrayComponents(param.type);
-  if (arrayComponents && hasDynamicChild({ ...param, type: arrayComponents[1] }))
-    return true;
-  return false;
-}
-var sizeOfLength = 32;
-var sizeOfOffset = 32;
-var init_decodeAbiParameters = __esm(() => {
-  init_abi();
-  init_getAddress();
-  init_cursor2();
-  init_size();
-  init_slice();
-  init_fromBytes();
-  init_toBytes();
-  init_toHex();
-  init_encodeAbiParameters();
 });
 function isMessage(arg, schema) {
   const isMessage2 = arg !== null && typeof arg == "object" && "$typeName" in arg && typeof arg.$typeName == "string";
@@ -5634,7 +4408,6 @@ var ListSchema = /* @__PURE__ */ messageDesc(file_values_v1_values, 3);
 var DecimalSchema = /* @__PURE__ */ messageDesc(file_values_v1_values, 4);
 var file_sdk_v1alpha_sdk = /* @__PURE__ */ fileDesc("ChVzZGsvdjFhbHBoYS9zZGsucHJvdG8SC3Nkay52MWFscGhhIrQBChVTaW1wbGVDb25zZW5zdXNJbnB1dHMSIQoFdmFsdWUYASABKAsyEC52YWx1ZXMudjEuVmFsdWVIABIPCgVlcnJvchgCIAEoCUgAEjUKC2Rlc2NyaXB0b3JzGAMgASgLMiAuc2RrLnYxYWxwaGEuQ29uc2Vuc3VzRGVzY3JpcHRvchIhCgdkZWZhdWx0GAQgASgLMhAudmFsdWVzLnYxLlZhbHVlQg0KC29ic2VydmF0aW9uIpABCglGaWVsZHNNYXASMgoGZmllbGRzGAEgAygLMiIuc2RrLnYxYWxwaGEuRmllbGRzTWFwLkZpZWxkc0VudHJ5Gk8KC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIvCgV2YWx1ZRgCIAEoCzIgLnNkay52MWFscGhhLkNvbnNlbnN1c0Rlc2NyaXB0b3I6AjgBIoYBChNDb25zZW5zdXNEZXNjcmlwdG9yEjMKC2FnZ3JlZ2F0aW9uGAEgASgOMhwuc2RrLnYxYWxwaGEuQWdncmVnYXRpb25UeXBlSAASLAoKZmllbGRzX21hcBgCIAEoCzIWLnNkay52MWFscGhhLkZpZWxkc01hcEgAQgwKCmRlc2NyaXB0b3IiagoNUmVwb3J0UmVxdWVzdBIXCg9lbmNvZGVkX3BheWxvYWQYASABKAwSFAoMZW5jb2Rlcl9uYW1lGAIgASgJEhQKDHNpZ25pbmdfYWxnbxgDIAEoCRIUCgxoYXNoaW5nX2FsZ28YBCABKAkilwEKDlJlcG9ydFJlc3BvbnNlEhUKDWNvbmZpZ19kaWdlc3QYASABKAwSEgoGc2VxX25yGAIgASgEQgIwABIWCg5yZXBvcnRfY29udGV4dBgDIAEoDBISCgpyYXdfcmVwb3J0GAQgASgMEi4KBHNpZ3MYBSADKAsyIC5zZGsudjFhbHBoYS5BdHRyaWJ1dGVkU2lnbmF0dXJlIjsKE0F0dHJpYnV0ZWRTaWduYXR1cmUSEQoJc2lnbmF0dXJlGAEgASgMEhEKCXNpZ25lcl9pZBgCIAEoDSJrChFDYXBhYmlsaXR5UmVxdWVzdBIKCgJpZBgBIAEoCRIlCgdwYXlsb2FkGAIgASgLMhQuZ29vZ2xlLnByb3RvYnVmLkFueRIOCgZtZXRob2QYAyABKAkSEwoLY2FsbGJhY2tfaWQYBCABKAUiWgoSQ2FwYWJpbGl0eVJlc3BvbnNlEicKB3BheWxvYWQYASABKAsyFC5nb29nbGUucHJvdG9idWYuQW55SAASDwoFZXJyb3IYAiABKAlIAEIKCghyZXNwb25zZSJYChNUcmlnZ2VyU3Vic2NyaXB0aW9uEgoKAmlkGAEgASgJEiUKB3BheWxvYWQYAiABKAsyFC5nb29nbGUucHJvdG9idWYuQW55Eg4KBm1ldGhvZBgDIAEoCSJVChpUcmlnZ2VyU3Vic2NyaXB0aW9uUmVxdWVzdBI3Cg1zdWJzY3JpcHRpb25zGAEgAygLMiAuc2RrLnYxYWxwaGEuVHJpZ2dlclN1YnNjcmlwdGlvbiJACgdUcmlnZ2VyEg4KAmlkGAEgASgEQgIwABIlCgdwYXlsb2FkGAIgASgLMhQuZ29vZ2xlLnByb3RvYnVmLkFueSInChhBd2FpdENhcGFiaWxpdGllc1JlcXVlc3QSCwoDaWRzGAEgAygFIrgBChlBd2FpdENhcGFiaWxpdGllc1Jlc3BvbnNlEkgKCXJlc3BvbnNlcxgBIAMoCzI1LnNkay52MWFscGhhLkF3YWl0Q2FwYWJpbGl0aWVzUmVzcG9uc2UuUmVzcG9uc2VzRW50cnkaUQoOUmVzcG9uc2VzRW50cnkSCwoDa2V5GAEgASgFEi4KBXZhbHVlGAIgASgLMh8uc2RrLnYxYWxwaGEuQ2FwYWJpbGl0eVJlc3BvbnNlOgI4ASKgAQoORXhlY3V0ZVJlcXVlc3QSDgoGY29uZmlnGAEgASgMEisKCXN1YnNjcmliZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAEicKB3RyaWdnZXIYAyABKAsyFC5zZGsudjFhbHBoYS5UcmlnZ2VySAASHQoRbWF4X3Jlc3BvbnNlX3NpemUYBCABKARCAjAAQgkKB3JlcXVlc3QimQEKD0V4ZWN1dGlvblJlc3VsdBIhCgV2YWx1ZRgBIAEoCzIQLnZhbHVlcy52MS5WYWx1ZUgAEg8KBWVycm9yGAIgASgJSAASSAoVdHJpZ2dlcl9zdWJzY3JpcHRpb25zGAMgASgLMicuc2RrLnYxYWxwaGEuVHJpZ2dlclN1YnNjcmlwdGlvblJlcXVlc3RIAEIICgZyZXN1bHQiVgoRR2V0U2VjcmV0c1JlcXVlc3QSLAoIcmVxdWVzdHMYASADKAsyGi5zZGsudjFhbHBoYS5TZWNyZXRSZXF1ZXN0EhMKC2NhbGxiYWNrX2lkGAIgASgFIiIKE0F3YWl0U2VjcmV0c1JlcXVlc3QSCwoDaWRzGAEgAygFIqsBChRBd2FpdFNlY3JldHNSZXNwb25zZRJDCglyZXNwb25zZXMYASADKAsyMC5zZGsudjFhbHBoYS5Bd2FpdFNlY3JldHNSZXNwb25zZS5SZXNwb25zZXNFbnRyeRpOCg5SZXNwb25zZXNFbnRyeRILCgNrZXkYASABKAUSKwoFdmFsdWUYAiABKAsyHC5zZGsudjFhbHBoYS5TZWNyZXRSZXNwb25zZXM6AjgBIi4KDVNlY3JldFJlcXVlc3QSCgoCaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJIkUKBlNlY3JldBIKCgJpZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSDQoFb3duZXIYAyABKAkSDQoFdmFsdWUYBCABKAkiSgoLU2VjcmV0RXJyb3ISCgoCaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJEg0KBW93bmVyGAMgASgJEg0KBWVycm9yGAQgASgJIm4KDlNlY3JldFJlc3BvbnNlEiUKBnNlY3JldBgBIAEoCzITLnNkay52MWFscGhhLlNlY3JldEgAEikKBWVycm9yGAIgASgLMhguc2RrLnYxYWxwaGEuU2VjcmV0RXJyb3JIAEIKCghyZXNwb25zZSJBCg9TZWNyZXRSZXNwb25zZXMSLgoJcmVzcG9uc2VzGAEgAygLMhsuc2RrLnYxYWxwaGEuU2VjcmV0UmVzcG9uc2UquAEKD0FnZ3JlZ2F0aW9uVHlwZRIgChxBR0dSRUdBVElPTl9UWVBFX1VOU1BFQ0lGSUVEEAASGwoXQUdHUkVHQVRJT05fVFlQRV9NRURJQU4QARIeChpBR0dSRUdBVElPTl9UWVBFX0lERU5USUNBTBACEiIKHkFHR1JFR0FUSU9OX1RZUEVfQ09NTU9OX1BSRUZJWBADEiIKHkFHR1JFR0FUSU9OX1RZUEVfQ09NTU9OX1NVRkZJWBAEKjkKBE1vZGUSFAoQTU9ERV9VTlNQRUNJRklFRBAAEgwKCE1PREVfRE9OEAESDQoJTU9ERV9OT0RFEAJCaAoPY29tLnNkay52MWFscGhhQghTZGtQcm90b1ABogIDU1hYqgILU2RrLlYxYWxwaGHKAgtTZGtcVjFhbHBoYeICF1Nka1xWMWFscGhhXEdQQk1ldGFkYXRh6gIMU2RrOjpWMWFscGhhYgZwcm90bzM", [file_google_protobuf_any, file_google_protobuf_empty, file_values_v1_values]);
 var SimpleConsensusInputsSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 0);
-var ConsensusDescriptorSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 2);
 var ReportRequestSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 3);
 var ReportResponseSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 4);
 var CapabilityRequestSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 6);
@@ -11023,33 +9796,7 @@ var defaultLookup = new NetworkLookup({
   testnetBySelector,
   testnetBySelectorByFamily
 });
-function consensusIdenticalAggregation() {
-  return simpleConsensus(AggregationType.IDENTICAL);
-}
-
-class ConsensusImpl {
-  descriptor;
-  defaultValue;
-  constructor(descriptor, defaultValue) {
-    this.descriptor = descriptor;
-    this.defaultValue = defaultValue;
-  }
-  withDefault(t) {
-    return new ConsensusImpl(this.descriptor, t);
-  }
-  _usesUToForceShape(_) {}
-}
-function simpleConsensus(agg) {
-  return new ConsensusImpl(simpleDescriptor(agg));
-}
-function simpleDescriptor(agg) {
-  return create(ConsensusDescriptorSchema, {
-    descriptor: {
-      case: "aggregation",
-      value: agg
-    }
-  });
-}
+var getNetwork = (options) => defaultLookup.find(options);
 
 class Int64 {
   static INT64_MIN = -(2n ** 63n);
@@ -12366,11 +11113,11 @@ function datetimeRegex(args) {
   regex = `${regex}(${opts.join("|")})`;
   return new RegExp(`^${regex}$`);
 }
-function isValidIP(ip, version3) {
-  if ((version3 === "v4" || !version3) && ipv4Regex.test(ip)) {
+function isValidIP(ip, version2) {
+  if ((version2 === "v4" || !version2) && ipv4Regex.test(ip)) {
     return true;
   }
-  if ((version3 === "v6" || !version3) && ipv6Regex.test(ip)) {
+  if ((version2 === "v6" || !version2) && ipv6Regex.test(ip)) {
     return true;
   }
   return false;
@@ -12397,11 +11144,11 @@ function isValidJWT(jwt, alg) {
     return false;
   }
 }
-function isValidCidr(ip, version3) {
-  if ((version3 === "v4" || !version3) && ipv4CidrRegex.test(ip)) {
+function isValidCidr(ip, version2) {
+  if ((version2 === "v4" || !version2) && ipv4CidrRegex.test(ip)) {
     return true;
   }
-  if ((version3 === "v6" || !version3) && ipv6CidrRegex.test(ip)) {
+  if ((version2 === "v6" || !version2) && ipv6CidrRegex.test(ip)) {
     return true;
   }
   return false;
@@ -15949,205 +14696,35 @@ var sendErrorResponse = (error) => {
   }
   hostBindings.sendResponse(payload);
 };
-init_exports();
-init_decodeAbiParameters();
 init_toBytes();
-init_toHex();
 init_keccak256();
-function fetchStandardNode(sendRequester, args) {
-  if (!args.apiKey)
-    return "FAILED";
-  try {
-    const response = sendRequester.sendRequest({
-      url: args.url,
-      method: "POST",
-      body: JSON.stringify({
-        model: args.model,
-        messages: [{ role: "user", content: args.prompt }],
-        temperature: 0.1
-      }),
-      headers: { Authorization: `Bearer ${args.apiKey}`, "Content-Type": "application/json" }
-    }).result();
-    const bodyStr = new TextDecoder().decode(response.body);
-    const content = JSON.parse(bodyStr).choices?.[0]?.message?.content;
-    return content ? content.toUpperCase() : "ERROR";
-  } catch (e) {
-    return "FAILED";
-  }
-}
-function fetchGemini(sendRequester, args) {
-  if (!args.apiKey)
-    return "FAILED";
-  try {
-    const response = sendRequester.sendRequest({
-      url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${args.apiKey}`,
-      method: "POST",
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: args.prompt }] }]
-      }),
-      headers: { "Content-Type": "application/json" }
-    }).result();
-    const bodyStr = new TextDecoder().decode(response.body);
-    const content = JSON.parse(bodyStr).candidates?.[0]?.content?.parts?.[0]?.text;
-    return content ? content.toUpperCase() : "ERROR";
-  } catch (e) {
-    return "FAILED";
-  }
-}
-function fetchJina(sendRequester, url) {
-  try {
-    const response = sendRequester.sendRequest({
-      url: `https://r.jina.ai/${url}`,
-      method: "GET",
-      headers: { Accept: "text/plain" }
-    }).result();
-    return new TextDecoder().decode(response.body).substring(0, 3000);
-  } catch (e) {
-    return "NO DATA SCRAPED";
-  }
-}
 var initWorkflow = (config) => {
-  const evmClient = new ClientCapability(11155111n);
-  const httpClient = new ClientCapability2;
-  const spamTopic = keccak256(toBytes("ProposalCreated(uint256,string,address,string,string,uint256)"));
-  const spamTrigger = evmClient.logTrigger({
-    addresses: [hexToBase64("0xa3c6e2b06b3c511d52e7682ba0aec234f2ba692a")],
-    topics: [{ values: [spamTopic] }]
+  const network248 = getNetwork({
+    chainFamily: "evm",
+    chainSelectorName: "ethereum-testnet-sepolia",
+    isTestnet: true
   });
-  const onSpamTrigger = (runtime2, log) => {
-    runtime2.log("\uD83D\uDEE1️ [Gatekeeper] Proposal Detected. Decoding Live Event...");
-    const rawHexData = bytesToHex(log.data);
-    const decoded = decodeAbiParameters(parseAbiParameters("uint256 proposalId, string marketId, address creator, string question, string dataSource, uint256 endTime"), rawHexData);
-    const proposalId = decoded[0].toString();
-    const question = decoded[3];
-    const dataSource = decoded[4];
-    const endTime = Number(decoded[5]);
-    runtime2.log(`Analyzing Proposal ${proposalId}: "${question}"`);
-    const currentDate = new Date().toUTCString();
-    const marketEndDate = new Date(endTime * 1000).toUTCString();
-    const geminiSecret = runtime2.getSecret({ id: "GEMINI_API_KEY" }).result();
-    const geminiKey = geminiSecret ? geminiSecret.value : "";
-    const groqSecret = runtime2.getSecret({ id: "GROQ_API_KEY" }).result();
-    const groqKey = groqSecret ? groqSecret.value : "";
-    const openRouterSecret = runtime2.getSecret({ id: "OPENROUTER_API_KEY" }).result();
-    const openRouterKey = openRouterSecret ? openRouterSecret.value : "";
-    const prompt = `You are a strict, objective auditor for a decentralized prediction market.
-    
-        CONTEXT:
-        - The current real-world date and time is: ${currentDate}
-        - The creator has set this market to close and resolve on: ${marketEndDate}
-        
-        MARKET DETAILS:
-        - QUESTION: "${question}"
-        - RESOLUTION RULES: "${dataSource}"
-        
-        A valid prediction market MUST meet ALL of these criteria:
-        1. Future Event: The event must NOT have already occurred. Retroactive betting is fraud/spam.
-        2. Logical Timeline: The market end date must logically occur AFTER the event is actually supposed to finish.
-        3. Objective: Entirely objective and factually verifiable via the provided rules/source.
-        4. No Paradoxes: It must not reference its own market state (e.g., "Will this market resolve to YES?").
-        5. Clean: Clearly written and not gibberish.
-        
-        Step 1: Briefly analyze if the proposal meets ALL FIVE criteria. Pay strict attention to the dates.
-        Step 2: Provide your final ruling.
-        
-        You MUST conclude your response with a new line containing exactly:
-        FINAL ANSWER: VALID
-        or
-        FINAL ANSWER: SPAM`;
-    const vote1 = httpClient.sendRequest(runtime2, fetchGemini, consensusIdenticalAggregation())({ apiKey: geminiKey, prompt }).result();
-    const vote2 = httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile", apiKey: groqKey, prompt }).result();
-    const vote3 = httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://openrouter.ai/api/v1/chat/completions", model: "meta-llama/llama-3-8b-instruct:free", apiKey: openRouterKey, prompt }).result();
-    let validVotes = 0;
-    if (vote1.includes("VALID"))
-      validVotes++;
-    if (vote2.includes("VALID"))
-      validVotes++;
-    if (vote3.includes("VALID"))
-      validVotes++;
-    const isSpam = validVotes < 2;
-    runtime2.log(`Gatekeeper Verdict: ${isSpam ? "SPAM \uD83D\uDED1" : "VALID ✅"} (Score: ${validVotes}/3)`);
-    return { proposalId, isSpam };
-  };
-  const resolutionTopic = keccak256(toBytes("ResolutionRequested(string,string,string)"));
-  const resolutionTrigger = evmClient.logTrigger({
-    addresses: [hexToBase64("b989aaB780ae15E3820f8d97aE84D1bBB91914D2")],
-    topics: [{ values: [resolutionTopic] }]
+  if (!network248) {
+    throw new Error("RPC Mismatch: Check your project.yaml chain-name!");
+  }
+  const evmClient = new ClientCapability(network248.chainSelector.selector);
+  const resolutionTopic = keccak256(toBytes("SettlementRequested(string,string,string)"));
+  const basicTrigger = evmClient.logTrigger({
+    addresses: [hexToBase64("0xb989aaB780ae15E3820f8d97aE84D1bBB91914D2")],
+    topics: [
+      {
+        values: [hexToBase64(resolutionTopic)]
+      }
+    ]
   });
-  const onResolutionTrigger = (runtime2, log) => {
-    runtime2.log("⚖️ [Truth Engine] Settlement Requested. Decoding Live Event...");
-    const rawHexData = bytesToHex(log.data);
-    const decoded = decodeAbiParameters(parseAbiParameters("string marketId, string question, string dataSource"), rawHexData);
-    const marketId = decoded[0];
-    const question = decoded[1];
-    const dataSourceUrl = decoded[2];
-    runtime2.log(`Resolving Market ${marketId}: "${question}"`);
-    const geminiSecret = runtime2.getSecret({ id: "GEMINI_API_KEY" }).result();
-    const geminiKey = geminiSecret ? geminiSecret.value : "";
-    const groqSecret = runtime2.getSecret({ id: "GROQ_API_KEY" }).result();
-    const groqKey = groqSecret ? groqSecret.value : "";
-    const openRouterSecret = runtime2.getSecret({ id: "OPENROUTER_API_KEY" }).result();
-    const openRouterKey = openRouterSecret ? openRouterSecret.value : "";
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const urls = dataSourceUrl.match(urlRegex);
-    const liveEvidence = urls ? httpClient.sendRequest(runtime2, fetchJina, consensusIdenticalAggregation())(urls[0]).result() : "NO URL PROVIDED";
-    const prompt = `You are the Oracle for a decentralized prediction market. Your job is to resolve a market based STRICTLY on the live scraped evidence provided below. Do NOT use your internal training data.
-    
-        MARKET QUESTION: "${question}"
-        
-        LIVE SCRAPED EVIDENCE FROM THE DATA SOURCE:
-        """
-        ${liveEvidence}
-        """
-        
-        INSTRUCTIONS:
-        1. Does the scraped evidence definitively prove the event happened?
-        2. If YES, reply ONLY with: FINAL VERDICT: YES
-        3. If NO or it proves the opposite, reply ONLY with: FINAL VERDICT: NO
-        4. If the evidence is broken or inconclusive, reply ONLY with: FINAL VERDICT: UNDECIDED`;
-    runtime2.log("Initiating Phase 1 (Initial 5-Node Mesh)...");
-    const phase1Votes = [
-      httpClient.sendRequest(runtime2, fetchGemini, consensusIdenticalAggregation())({ apiKey: geminiKey, prompt }).result(),
-      httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile", apiKey: groqKey, prompt }).result(),
-      httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://api.groq.com/openai/v1/chat/completions", model: "mixtral-8x7b-32768", apiKey: groqKey, prompt }).result(),
-      httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://openrouter.ai/api/v1/chat/completions", model: "mistralai/mistral-7b-instruct:free", apiKey: openRouterKey, prompt }).result(),
-      httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-2-9b-it:free", apiKey: openRouterKey, prompt }).result()
-    ];
-    let yesVotes = phase1Votes.filter((v) => v.includes("YES")).length;
-    let noVotes = phase1Votes.filter((v) => v.includes("NO")).length;
-    if (yesVotes >= 4) {
-      runtime2.log(`\uD83C\uDFC6 Phase 1 Consensus Reached: YES (${yesVotes}/5)`);
-      return { marketId, outcome: 1 };
-    } else if (noVotes >= 4) {
-      runtime2.log(`\uD83D\uDED1 Phase 1 Consensus Reached: NO (${noVotes}/5)`);
-      return { marketId, outcome: 2 };
-    }
-    runtime2.log(`⚠️ Phase 1 Failed (YES: ${yesVotes}, NO: ${noVotes}). Escalating to Phase 2 (10 Nodes)...`);
-    const phase2Votes = [
-      httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://api.groq.com/openai/v1/chat/completions", model: "gemma2-9b-it", apiKey: groqKey, prompt }).result(),
-      httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.1-8b-instant", apiKey: groqKey, prompt }).result(),
-      httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://openrouter.ai/api/v1/chat/completions", model: "microsoft/phi-3-mini-128k-instruct:free", apiKey: openRouterKey, prompt }).result(),
-      httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://openrouter.ai/api/v1/chat/completions", model: "qwen/qwen-2-7b-instruct:free", apiKey: openRouterKey, prompt }).result(),
-      httpClient.sendRequest(runtime2, fetchStandardNode, consensusIdenticalAggregation())({ url: "https://openrouter.ai/api/v1/chat/completions", model: "meta-llama/llama-3-8b-instruct:free", apiKey: openRouterKey, prompt }).result()
-    ];
-    yesVotes += phase2Votes.filter((v) => v.includes("YES")).length;
-    noVotes += phase2Votes.filter((v) => v.includes("NO")).length;
-    let finalOutcome = 0;
-    if (yesVotes >= 7) {
-      finalOutcome = 1;
-      runtime2.log(`\uD83C\uDFC6 Phase 2 Consensus Reached: YES (${yesVotes}/10)`);
-    } else if (noVotes >= 7) {
-      finalOutcome = 2;
-      runtime2.log(`\uD83D\uDED1 Phase 2 Consensus Reached: NO (${noVotes}/10)`);
-    } else {
-      runtime2.log(`⏳ Total consensus failure. Market is highly ambiguous. UNDECIDED.`);
-    }
-    return { marketId, outcome: finalOutcome };
+  const onBasicTrigger = (runtime2, log) => {
+    runtime2.log("✅ =========================================");
+    runtime2.log("✅ SUCCESS: The Truth Engine is online!");
+    runtime2.log("✅ WASM SUBSCRIPTION STABILIZED!");
+    runtime2.log("✅ =========================================");
+    return { status: "Success" };
   };
-  return [
-    handler(spamTrigger, onSpamTrigger),
-    handler(resolutionTrigger, onResolutionTrigger)
-  ];
+  return [handler(basicTrigger, onBasicTrigger)];
 };
 async function main() {
   const runner = await Runner.newRunner();
